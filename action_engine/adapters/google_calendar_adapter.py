@@ -7,6 +7,9 @@ async def create_event(payload):
     # תיעוד / הדמיה
     print(f"[GOOGLE_CALENDAR] create_event called with payload: {payload}")
 
+    # Placeholder for Google Calendar API integration
+    # Example: await google_calendar_client.create_event(payload)
+
     # החזרה דמיונית
     return {
         "status": "success",

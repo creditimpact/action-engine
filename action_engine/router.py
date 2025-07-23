@@ -1,4 +1,8 @@
 from fastapi.responses import JSONResponse
+from fastapi import HTTPException
+
+from validator import validate_request
+from action_parser import parse_request
 
 # ייבוא אדפטרים
 from adapters import (
@@ -7,6 +11,7 @@ from adapters import (
     notion_adapter,
     zapier_adapter,
 )
+from actions_registry import ACTIONS_REGISTRY
 
 # מילון שמתאים בין פלטפורמות למודולים
 adapter_registry = {
@@ -17,9 +22,15 @@ adapter_registry = {
 }
 
 async def route_action(data):
-    platform = data.get("platform")
-    action_type = data.get("action_type")
-    payload = data.get("payload", {})
+    try:
+        request_model = validate_request(data)
+    except HTTPException as exc:
+        return JSONResponse(content={"error": exc.detail}, status_code=exc.status_code)
+
+    action = parse_request(request_model)
+    platform = action.platform
+    action_type = action.action_type
+    payload = action.payload
 
     if platform == "test":
         return JSONResponse(content={"message": "המערכת עובדת 🎯"})
@@ -28,6 +39,12 @@ async def route_action(data):
         return JSONResponse(
             content={"error": f"פלטפורמה לא תקינה או לא נתמכת: '{platform}'"},
             status_code=400
+        )
+
+    if action_type not in ACTIONS_REGISTRY.get(platform, []):
+        return JSONResponse(
+            content={"error": f"הפעולה '{action_type}' אינה נתמכת עבור הפלטפורמה '{platform}'"},
+            status_code=400,
         )
 
     adapter_module = adapter_registry[platform]
