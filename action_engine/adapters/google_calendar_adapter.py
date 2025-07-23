@@ -17,7 +17,7 @@ async def create_event(user_id: str, payload: dict):
     יוצר אירוע ביומן Google (מימוש ראשוני, דמיוני).
     """
     # תיעוד / הדמיה
-    token = get_token(user_id, "google_calendar")
+    token = await get_token(user_id, "google_calendar")
     if not token:
         logger.info(
             "Google Calendar token missing",

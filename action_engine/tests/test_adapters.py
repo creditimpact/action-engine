@@ -5,14 +5,14 @@ from auth import token_manager
 @pytest.mark.asyncio
 async def test_gmail_perform_action():
     params = {"a": 1}
-    token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", "t")
     result = await gmail_adapter.perform_action("u1", params)
     assert result == {"message": "בוצעה פעולה ב־Gmail", "params": params}
 
 @pytest.mark.asyncio
 async def test_gmail_send_email():
     payload = {"to": "x@example.com"}
-    token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", "t")
     result = await gmail_adapter.send_email("u1", payload)
     assert result == {
         "status": "success",
@@ -24,7 +24,7 @@ async def test_gmail_send_email():
 @pytest.mark.asyncio
 async def test_google_calendar_create_event():
     payload = {"title": "meeting"}
-    token_manager.set_token("u1", "google_calendar", "t")
+    await token_manager.set_token("u1", "google_calendar", "t")
     result = await google_calendar_adapter.create_event("u1", payload)
     assert result == {
         "status": "success",
@@ -36,7 +36,7 @@ async def test_google_calendar_create_event():
 @pytest.mark.asyncio
 async def test_notion_create_task():
     payload = {"title": "task"}
-    token_manager.set_token("u1", "notion", "t")
+    await token_manager.set_token("u1", "notion", "t")
     result = await notion_adapter.create_task("u1", payload)
     assert result == {
         "status": "success",
@@ -48,6 +48,6 @@ async def test_notion_create_task():
 @pytest.mark.asyncio
 async def test_zapier_perform_action():
     params = {"x": 2}
-    token_manager.set_token("u1", "zapier", "t")
+    await token_manager.set_token("u1", "zapier", "t")
     result = await zapier_adapter.perform_action("u1", params)
     assert result == {"message": "בוצעה פעולה דרך Zapier", "params": params}

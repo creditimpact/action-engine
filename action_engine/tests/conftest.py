@@ -74,10 +74,28 @@ def pytest_pyfunc_call(pyfuncitem):
     if pyfuncitem.get_closest_marker("asyncio"):
         func = pyfuncitem.obj
         if inspect.iscoroutinefunction(func):
-            asyncio.run(func(**pyfuncitem.funcargs))
+            asyncio.run(func())
             return True
 
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", "asyncio: mark test to run asynchronously using asyncio.run"
     )
+
+
+class DummyRedis:
+    def __init__(self):
+        self.store = {}
+
+    async def hget(self, key, field):
+        return self.store.get(key, {}).get(field)
+
+    async def hset(self, key, mapping):
+        self.store.setdefault(key, {}).update(mapping)
+
+
+@pytest.fixture(autouse=True)
+def fake_redis():
+    from auth import token_manager
+    token_manager.redis_client = DummyRedis()
+    yield

@@ -14,7 +14,7 @@ async def test_save_token_success():
     response = await main.save_token(payload)
     assert response.status_code == 200
     assert response.content == {"status": "ok"}
-    assert token_manager.get_token("u1", "gmail") == "tok"
+    assert await token_manager.get_token("u1", "gmail") == "tok"
 
 
 @pytest.mark.asyncio

@@ -37,6 +37,6 @@ async def save_token(data: dict):
         logger.info("Token validation error", extra={"user_id": user_id, "platform": platform})
         return JSONResponse(content={"error": detail}, status_code=400)
 
-    token_manager.set_token(user_id, platform, access_token)
+    await token_manager.set_token(user_id, platform, access_token)
     logger.info("Token stored", extra={"user_id": user_id, "platform": platform})
     return JSONResponse(content={"status": "ok"})

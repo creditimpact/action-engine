@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 
 async def perform_action(user_id: str, params: dict):
     """Mock action execution for Gmail."""
-    token = get_token(user_id, "gmail")
+    token = await get_token(user_id, "gmail")
     if not token:
         logger.info(
             "Gmail token missing",
@@ -35,7 +35,7 @@ async def send_email(user_id: str, payload: dict) -> dict:
     simply echoes back the provided payload.
     """
     # Basic logging for action invocation
-    token = get_token(user_id, "gmail")
+    token = await get_token(user_id, "gmail")
     if not token:
         logger.info(
             "Gmail token missing",

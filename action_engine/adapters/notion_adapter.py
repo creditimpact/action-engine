@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 async def create_task(user_id: str, payload: dict):
     """Create a task in Notion (mocked)."""
     # Simulate interaction with Notion API
-    token = get_token(user_id, "notion")
+    token = await get_token(user_id, "notion")
     if not token:
         logger.info(
             "Notion token missing",
