@@ -7,14 +7,57 @@ class DummyJSONResponse:
         self.content = content
         self.status_code = status_code
 
+
+class DummyHTTPException(Exception):
+    """Lightweight stand-in for FastAPI HTTPException."""
+
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+
 a_responses = types.ModuleType("fastapi.responses")
 a_responses.JSONResponse = DummyJSONResponse
 
+a_exceptions = types.ModuleType("fastapi.exceptions")
+a_exceptions.HTTPException = DummyHTTPException
+
 fastapi = types.ModuleType("fastapi")
 fastapi.responses = a_responses
+fastapi.HTTPException = DummyHTTPException
+
+# Minimal FastAPI stub so modules importing FastAPI don't fail
+class DummyFastAPI:
+    def post(self, path):
+        def decorator(func):
+            return func
+        return decorator
+
+fastapi.FastAPI = DummyFastAPI
 
 sys.modules.setdefault("fastapi", fastapi)
 sys.modules.setdefault("fastapi.responses", a_responses)
+sys.modules.setdefault("fastapi.exceptions", a_exceptions)
+
+# -- Pydantic stubs ---------------------------------------------------------
+pydantic = types.ModuleType("pydantic")
+
+class BaseModel:
+    def __init__(self, **data):
+        for k, v in data.items():
+            setattr(self, k, v)
+
+    def dict(self):
+        return self.__dict__
+
+
+class ValidationError(Exception):
+    pass
+
+pydantic.BaseModel = BaseModel
+pydantic.ValidationError = ValidationError
+
+sys.modules.setdefault("pydantic", pydantic)
 
 # Ensure project root is on the import path so tests can import modules
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
