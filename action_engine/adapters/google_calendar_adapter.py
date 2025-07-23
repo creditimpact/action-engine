@@ -1,13 +1,6 @@
 # google_calendar_adapter.py
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from action_engine.logging.logger import get_logger
-from auth.token_manager import get_token
+from action_engine.auth.token_manager import get_token
 
 logger = get_logger(__name__)
 

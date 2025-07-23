@@ -1,9 +1,9 @@
 import importlib
 import pytest
-from auth import token_manager
+from action_engine.auth import token_manager
 
 # Import router after fastapi stub is set up in conftest
-router = importlib.import_module("router")
+router = importlib.import_module("action_engine.router")
 
 def make_payload():
     return {"key": "value"}

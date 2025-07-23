@@ -1,5 +1,5 @@
 import pytest
-from auth import token_manager
+from action_engine.auth import token_manager
 
 
 def test_token_storage_per_user():

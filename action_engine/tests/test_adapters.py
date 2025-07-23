@@ -1,6 +1,11 @@
 import pytest
-from adapters import gmail_adapter, google_calendar_adapter, notion_adapter, zapier_adapter
-from auth import token_manager
+from action_engine.adapters import (
+    gmail_adapter,
+    google_calendar_adapter,
+    notion_adapter,
+    zapier_adapter,
+)
+from action_engine.auth import token_manager
 
 @pytest.mark.asyncio
 async def test_gmail_perform_action():

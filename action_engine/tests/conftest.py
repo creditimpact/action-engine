@@ -59,11 +59,6 @@ pydantic.ValidationError = ValidationError
 
 sys.modules.setdefault("pydantic", pydantic)
 
-# Ensure project root is on the import path so tests can import modules
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
 # Minimal support for `pytest.mark.asyncio` without external dependency
 import inspect
 import asyncio

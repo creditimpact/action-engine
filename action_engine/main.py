@@ -1,17 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from router import route_action
-from validator import ActionRequest
-
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from action_engine.router import route_action
+from action_engine.validator import ActionRequest
 
 from action_engine.logging.logger import get_logger
-from auth import token_manager
+from action_engine.auth import token_manager
 
 app = FastAPI()
 logger = get_logger(__name__)

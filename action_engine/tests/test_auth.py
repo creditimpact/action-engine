@@ -1,11 +1,11 @@
 import importlib
 import pytest
 
-from auth import token_manager
+from action_engine.auth import token_manager
 
 
 # Import main after FastAPI stubs are set up in conftest
-main = importlib.import_module("main")
+main = importlib.import_module("action_engine.main")
 
 
 @pytest.mark.asyncio
