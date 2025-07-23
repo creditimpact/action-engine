@@ -1,21 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import JSONResponse
-from router import route_action
-from validator import ActionRequest
-
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from action_engine.router import route_action
+from action_engine.validator import ActionRequest
 
 from action_engine.logging.logger import (
     get_logger,
     get_request_id,
     RequestIdMiddleware,
 )
-from auth import token_manager
+from action_engine.auth import token_manager
+
+API_KEY = "testkey"
 
 app = FastAPI()
 app.add_middleware(RequestIdMiddleware)
@@ -23,7 +18,9 @@ logger = get_logger(__name__)
 
 
 @app.post("/perform_action")
-async def perform_action(request: ActionRequest):
+async def perform_action(request: ActionRequest, x_api_key: str = Header(None)):
+    if x_api_key != API_KEY:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
     request_id = get_request_id()
     logger.info("Received action request", extra={"request_id": request_id})
     response = await route_action(request.dict())
@@ -32,7 +29,9 @@ async def perform_action(request: ActionRequest):
 
 
 @app.post("/auth/token")
-async def save_token(data: dict):
+async def save_token(data: dict, x_api_key: str = Header(None)):
+    if x_api_key != API_KEY:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
     """Store an access token for a user/platform."""
     user_id = data.get("user_id")
     platform = data.get("platform")
@@ -46,7 +45,7 @@ async def save_token(data: dict):
         )
         return JSONResponse(content={"error": detail}, status_code=400)
 
-    token_manager.set_token(user_id, platform, access_token)
+    await token_manager.set_token(user_id, platform, access_token)
     logger.info(
         "Token stored",
         extra={"user_id": user_id, "platform": platform, "request_id": get_request_id()},

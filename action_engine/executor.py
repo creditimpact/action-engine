@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from router import route_action
+from action_engine.router import route_action
 
 
 async def execute(action_model: Any):

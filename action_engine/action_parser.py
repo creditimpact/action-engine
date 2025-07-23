@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from validator import ActionRequest
+from action_engine.validator import ActionRequest
 
 
 @dataclass
