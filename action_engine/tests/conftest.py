@@ -26,6 +26,12 @@ fastapi = types.ModuleType("fastapi")
 fastapi.responses = a_responses
 fastapi.HTTPException = DummyHTTPException
 
+# Provide minimal implementations of common FastAPI utilities
+def Header(default=None):
+    return default
+
+fastapi.Header = Header
+
 # Minimal FastAPI stub so modules importing FastAPI don't fail
 class DummyFastAPI:
     def post(self, path):
