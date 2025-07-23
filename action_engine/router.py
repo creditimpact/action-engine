@@ -1,6 +1,15 @@
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from action_engine.logging.logger import get_logger
+
 from validator import validate_request
 from action_parser import parse_request
 
@@ -13,6 +22,8 @@ from adapters import (
 )
 from actions_registry import ACTIONS_REGISTRY
 
+logger = get_logger(__name__)
+
 # מילון שמתאים בין פלטפורמות למודולים
 adapter_registry = {
     "gmail": gmail_adapter,
@@ -22,9 +33,11 @@ adapter_registry = {
 }
 
 async def route_action(data):
+    logger.info("Routing action", extra={"payload": data})
     try:
         request_model = validate_request(data)
     except HTTPException as exc:
+        logger.info("Validation error", extra={"error": exc.detail})
         return JSONResponse(content={"error": exc.detail}, status_code=exc.status_code)
 
     action = parse_request(request_model)
@@ -36,6 +49,7 @@ async def route_action(data):
         return JSONResponse(content={"message": "המערכת עובדת 🎯"})
 
     if not platform or platform not in adapter_registry:
+        logger.info("Unsupported platform", extra={"platform": platform})
         return JSONResponse(
             content={"error": f"פלטפורמה לא תקינה או לא נתמכת: '{platform}'"},
             status_code=400
@@ -47,12 +61,14 @@ async def route_action(data):
     action_func = getattr(adapter_module, action_type, None)
 
     if not action_func:
+        logger.info("Unknown action", extra={"action_type": action_type, "platform": platform})
         return JSONResponse(
             content={"error": f"הפעולה '{action_type}' לא קיימת באדפטר '{platform}'"},
             status_code=400
         )
 
     if action_type not in ACTIONS_REGISTRY.get(platform, []):
+        logger.info("Action not supported", extra={"action_type": action_type, "platform": platform})
         return JSONResponse(
             content={"error": f"הפעולה '{action_type}' אינה נתמכת עבור הפלטפורמה '{platform}'"},
             status_code=400,
@@ -60,6 +76,8 @@ async def route_action(data):
 
     try:
         result = await action_func(payload)
+        logger.info("Adapter executed", extra={"platform": platform, "action_type": action_type})
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as e:
+        logger.info("Execution error", extra={"error": str(e)})
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
