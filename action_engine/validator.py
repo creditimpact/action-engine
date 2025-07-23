@@ -36,10 +36,14 @@ def validate_request(data: Dict[str, Any]) -> ActionRequest:
     required_fields = ["action_type", "platform", "payload"]
     for field in required_fields:
         if field not in data or data[field] is None:
-            raise HTTPException(status_code=422, detail=f"Missing required field: '{field}'")
+            # Error message in Hebrew so tests can verify localised responses
+            detail = f"שדה חובה חסר: '{field}'"
+            if field == "platform":
+                detail += " (פלטפורמה)"
+            raise HTTPException(status_code=400, detail=detail)
 
     try:
         return ActionRequest(**data)
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc))
 

@@ -41,12 +41,6 @@ async def route_action(data):
             status_code=400
         )
 
-    if action_type not in ACTIONS_REGISTRY.get(platform, []):
-        return JSONResponse(
-            content={"error": f"הפעולה '{action_type}' אינה נתמכת עבור הפלטפורמה '{platform}'"},
-            status_code=400,
-        )
-
     adapter_module = adapter_registry[platform]
 
     # מנסה למצוא את הפונקציה המתאימה לפעולה
@@ -56,6 +50,12 @@ async def route_action(data):
         return JSONResponse(
             content={"error": f"הפעולה '{action_type}' לא קיימת באדפטר '{platform}'"},
             status_code=400
+        )
+
+    if action_type not in ACTIONS_REGISTRY.get(platform, []):
+        return JSONResponse(
+            content={"error": f"הפעולה '{action_type}' אינה נתמכת עבור הפלטפורמה '{platform}'"},
+            status_code=400,
         )
 
     try:
