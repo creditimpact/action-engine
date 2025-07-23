@@ -11,6 +11,7 @@ from adapters import (
     notion_adapter,
     zapier_adapter,
 )
+from actions_registry import ACTIONS_REGISTRY
 
 # מילון שמתאים בין פלטפורמות למודולים
 adapter_registry = {
@@ -38,6 +39,12 @@ async def route_action(data):
         return JSONResponse(
             content={"error": f"פלטפורמה לא תקינה או לא נתמכת: '{platform}'"},
             status_code=400
+        )
+
+    if action_type not in ACTIONS_REGISTRY.get(platform, []):
+        return JSONResponse(
+            content={"error": f"הפעולה '{action_type}' אינה נתמכת עבור הפלטפורמה '{platform}'"},
+            status_code=400,
         )
 
     adapter_module = adapter_registry[platform]
