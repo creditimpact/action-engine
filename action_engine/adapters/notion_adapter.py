@@ -1,3 +1,10 @@
-async def perform_action(params):
-    # כאן תבוא האינטגרציה האמיתית עם Notion
-    return {"message": "בוצעה פעולה ב־Notion", "params": params}
+async def create_task(payload):
+    """Create a task in Notion (mocked)."""
+    # Simulate interaction with Notion API
+    print(f"[Notion] Creating task with payload: {payload}")
+    return {
+        "status": "success",
+        "platform": "notion",
+        "message": "משימה נוצרה בהצלחה",
+        "data": payload,
+    }
