@@ -8,7 +8,7 @@ Action Engine is a lightweight FastAPI service for routing automation requests t
 - `action_engine/router.py` – routes requests to the correct adapter.
 - `action_engine/adapters/` – adapters for external platforms such as Gmail, Notion, Google Calendar and Zapier.
 - `action_engine/actions_registry.py` – registry describing available actions per platform.
-- Other directories (`auth`, `logging`, `scheduler`, `tests`, `utils`) contain placeholder modules for future extensions.
+- Other directories (`auth`, `logging`, `tests`, `utils`) contain placeholder modules for future extensions.
 
 ## Running the app
 
