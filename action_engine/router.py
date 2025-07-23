@@ -1,4 +1,8 @@
 from fastapi.responses import JSONResponse
+from fastapi import HTTPException
+
+from validator import validate_request
+from action_parser import parse_request
 
 # ייבוא אדפטרים
 from adapters import (
@@ -17,9 +21,15 @@ adapter_registry = {
 }
 
 async def route_action(data):
-    platform = data.get("platform")
-    action_type = data.get("action_type")
-    payload = data.get("payload", {})
+    try:
+        request_model = validate_request(data)
+    except HTTPException as exc:
+        return JSONResponse(content={"error": exc.detail}, status_code=exc.status_code)
+
+    action = parse_request(request_model)
+    platform = action.platform
+    action_type = action.action_type
+    payload = action.payload
 
     if platform == "test":
         return JSONResponse(content={"message": "המערכת עובדת 🎯"})
