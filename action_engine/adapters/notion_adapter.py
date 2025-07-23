@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from action_engine.logging.logger import get_logger
+from action_engine.logging.logger import get_logger, get_request_id
 from auth.token_manager import get_token
 
 logger = get_logger(__name__)
@@ -18,13 +18,13 @@ async def create_task(user_id: str, payload: dict):
     if not token:
         logger.info(
             "Notion token missing",
-            extra={"user_id": user_id, "platform": "notion"},
+            extra={"user_id": user_id, "platform": "notion", "request_id": get_request_id()},
         )
         return {"status": "error", "message": "Missing token for notion"}
 
     logger.info(
         "Notion create_task",
-        extra={"payload": payload, "user_id": user_id},
+        extra={"payload": payload, "user_id": user_id, "request_id": get_request_id()},
     )
 
     # Placeholder for Notion API integration
