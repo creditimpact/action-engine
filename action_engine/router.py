@@ -43,6 +43,7 @@ async def route_action(data):
     action = parse_request(request_model)
     platform = action.platform
     action_type = action.action_type
+    user_id = action.user_id
     payload = action.payload
 
     if platform == "test":
@@ -75,7 +76,7 @@ async def route_action(data):
         )
 
     try:
-        result = await action_func(payload)
+        result = await action_func(user_id, payload)
         logger.info("Adapter executed", extra={"platform": platform, "action_type": action_type})
         return JSONResponse(content={"status": "success", "result": result})
     except Exception as e:

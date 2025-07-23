@@ -1,5 +1,6 @@
 import importlib
 import pytest
+from auth import token_manager
 
 # Import router after fastapi stub is set up in conftest
 router = importlib.import_module("router")
@@ -10,9 +11,11 @@ def make_payload():
 @pytest.mark.asyncio
 async def test_route_gmail_success():
     payload = make_payload()
+    token_manager.set_token("u1", "gmail", "t")
     response = await router.route_action({
         "platform": "gmail",
         "action_type": "perform_action",
+        "user_id": "u1",
         "payload": payload,
     })
     assert response.status_code == 200
@@ -27,9 +30,11 @@ async def test_route_gmail_success():
 @pytest.mark.asyncio
 async def test_route_google_calendar_success():
     payload = make_payload()
+    token_manager.set_token("u1", "google_calendar", "t")
     response = await router.route_action({
         "platform": "google_calendar",
         "action_type": "create_event",
+        "user_id": "u1",
         "payload": payload,
     })
     assert response.status_code == 200
@@ -46,9 +51,11 @@ async def test_route_google_calendar_success():
 @pytest.mark.asyncio
 async def test_route_notion_success():
     payload = make_payload()
+    token_manager.set_token("u1", "notion", "t")
     response = await router.route_action({
         "platform": "notion",
         "action_type": "create_task",
+        "user_id": "u1",
         "payload": payload,
     })
     assert response.status_code == 200
@@ -65,9 +72,11 @@ async def test_route_notion_success():
 @pytest.mark.asyncio
 async def test_route_zapier_success():
     payload = make_payload()
+    token_manager.set_token("u1", "zapier", "t")
     response = await router.route_action({
         "platform": "zapier",
         "action_type": "perform_action",
+        "user_id": "u1",
         "payload": payload,
     })
     assert response.status_code == 200
@@ -83,6 +92,7 @@ async def test_route_zapier_success():
 async def test_missing_platform_error():
     response = await router.route_action({
         "action_type": "perform_action",
+        "user_id": "u1",
         "payload": {},
     })
     assert response.status_code == 400
@@ -93,6 +103,7 @@ async def test_unknown_action_error():
     response = await router.route_action({
         "platform": "gmail",
         "action_type": "unknown",
+        "user_id": "u1",
         "payload": {},
     })
     assert response.status_code == 400
