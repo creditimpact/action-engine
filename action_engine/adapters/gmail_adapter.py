@@ -5,8 +5,8 @@ async def perform_action(params):
 
 async def send_email(payload):
     """Simulate sending an email via Gmail."""
-    # Logging or debugging output for the mocked action
-    print(f"[Gmail] Sending email with payload: {payload}")
+    # Basic logging for action invocation
+    print(f"[GMAIL] send_email called with payload: {payload}")
 
     return {
         "status": "success",
