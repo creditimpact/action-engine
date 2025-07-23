@@ -1,26 +1,19 @@
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from action_engine.logging.logger import get_logger, get_request_id
 
-from validator import validate_request
-from action_parser import parse_request
+from action_engine.validator import validate_request
+from action_engine.action_parser import parse_request
 
 # ייבוא אדפטרים
-from adapters import (
+from action_engine.adapters import (
     gmail_adapter,
     google_calendar_adapter,
     notion_adapter,
     zapier_adapter,
 )
-from actions_registry import ACTIONS_REGISTRY
+from action_engine.actions_registry import ACTIONS_REGISTRY
 
 logger = get_logger(__name__)
 

@@ -1,12 +1,5 @@
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from action_engine.logging.logger import get_logger, get_request_id
-from auth.token_manager import get_token
+from action_engine.auth import token_manager
 
 logger = get_logger(__name__)
 
@@ -14,7 +7,7 @@ logger = get_logger(__name__)
 async def create_task(user_id: str, payload: dict):
     """Create a task in Notion (mocked)."""
     # Simulate interaction with Notion API
-    token = get_token(user_id, "notion")
+    token = await token_manager.get_token(user_id, "notion")
     if not token:
         logger.info(
             "Notion token missing",

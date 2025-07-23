@@ -1,19 +1,12 @@
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from action_engine.logging.logger import get_logger, get_request_id
-from auth.token_manager import get_token
+from action_engine.auth import token_manager
 
 logger = get_logger(__name__)
 
 
 async def perform_action(user_id: str, params: dict):
     """Mock integration with Zapier Webhook / Trigger."""
-    token = get_token(user_id, "zapier")
+    token = await token_manager.get_token(user_id, "zapier")
     if not token:
         logger.info(
             "Zapier token missing",
@@ -30,7 +23,7 @@ async def perform_action(user_id: str, params: dict):
 
 async def trigger_zap(user_id: str, payload: dict) -> dict:
     """Trigger a Zap via webhook (mocked)."""
-    token = get_token(user_id, "zapier")
+    token = await token_manager.get_token(user_id, "zapier")
     if not token:
         logger.info(
             "Zapier token missing",
