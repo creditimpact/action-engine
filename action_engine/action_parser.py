@@ -12,6 +12,7 @@ class ActionModel:
 
     action_type: str
     platform: str
+    user_id: str
     payload: Dict[str, Any]
 
 
@@ -21,6 +22,7 @@ def parse_request(request: ActionRequest) -> ActionModel:
     return ActionModel(
         action_type=request.action_type,
         platform=request.platform,
+        user_id=request.user_id,
         payload=request.payload,
     )
 

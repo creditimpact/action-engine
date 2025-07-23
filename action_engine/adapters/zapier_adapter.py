@@ -6,19 +6,42 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from action_engine.logging.logger import get_logger
+from auth.token_manager import get_token
 
 logger = get_logger(__name__)
 
 
-async def perform_action(params):
-    # כאן תבוא האינטגרציה עם Zapier Webhook / Trigger
-    logger.info("Zapier perform_action", extra={"params": params})
+async def perform_action(user_id: str, params: dict):
+    """Mock integration with Zapier Webhook / Trigger."""
+    token = get_token(user_id, "zapier")
+    if not token:
+        logger.info(
+            "Zapier token missing",
+            extra={"user_id": user_id, "platform": "zapier"},
+        )
+        return {"status": "error", "message": "Missing token for zapier"}
+
+    logger.info(
+        "Zapier perform_action",
+        extra={"params": params, "user_id": user_id},
+    )
     return {"message": "בוצעה פעולה דרך Zapier", "params": params}
 
 
-async def trigger_zap(payload: dict) -> dict:
+async def trigger_zap(user_id: str, payload: dict) -> dict:
     """Trigger a Zap via webhook (mocked)."""
-    logger.info("Zapier trigger_zap", extra={"payload": payload})
+    token = get_token(user_id, "zapier")
+    if not token:
+        logger.info(
+            "Zapier token missing",
+            extra={"user_id": user_id, "platform": "zapier"},
+        )
+        return {"status": "error", "message": "Missing token for zapier"}
+
+    logger.info(
+        "Zapier trigger_zap",
+        extra={"payload": payload, "user_id": user_id},
+    )
 
     # Placeholder for actual webhook call
     # Example: await zapier_client.trigger(payload)

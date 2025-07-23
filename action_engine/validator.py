@@ -11,6 +11,7 @@ class ActionRequest(BaseModel):
 
     action_type: str
     platform: str
+    user_id: str
     payload: Dict[str, Any]
 
 
@@ -33,7 +34,7 @@ def validate_request(data: Dict[str, Any]) -> ActionRequest:
         If required fields are missing or parsing fails.
     """
 
-    required_fields = ["action_type", "platform", "payload"]
+    required_fields = ["action_type", "platform", "user_id", "payload"]
     for field in required_fields:
         if field not in data or data[field] is None:
             # Error message in Hebrew so tests can verify localised responses

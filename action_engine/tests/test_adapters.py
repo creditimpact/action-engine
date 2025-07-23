@@ -1,16 +1,19 @@
 import pytest
 from adapters import gmail_adapter, google_calendar_adapter, notion_adapter, zapier_adapter
+from auth import token_manager
 
 @pytest.mark.asyncio
 async def test_gmail_perform_action():
     params = {"a": 1}
-    result = await gmail_adapter.perform_action(params)
+    token_manager.set_token("u1", "gmail", "t")
+    result = await gmail_adapter.perform_action("u1", params)
     assert result == {"message": "בוצעה פעולה ב־Gmail", "params": params}
 
 @pytest.mark.asyncio
 async def test_gmail_send_email():
     payload = {"to": "x@example.com"}
-    result = await gmail_adapter.send_email(payload)
+    token_manager.set_token("u1", "gmail", "t")
+    result = await gmail_adapter.send_email("u1", payload)
     assert result == {
         "status": "success",
         "platform": "gmail",
@@ -21,7 +24,8 @@ async def test_gmail_send_email():
 @pytest.mark.asyncio
 async def test_google_calendar_create_event():
     payload = {"title": "meeting"}
-    result = await google_calendar_adapter.create_event(payload)
+    token_manager.set_token("u1", "google_calendar", "t")
+    result = await google_calendar_adapter.create_event("u1", payload)
     assert result == {
         "status": "success",
         "platform": "google_calendar",
@@ -32,7 +36,8 @@ async def test_google_calendar_create_event():
 @pytest.mark.asyncio
 async def test_notion_create_task():
     payload = {"title": "task"}
-    result = await notion_adapter.create_task(payload)
+    token_manager.set_token("u1", "notion", "t")
+    result = await notion_adapter.create_task("u1", payload)
     assert result == {
         "status": "success",
         "platform": "notion",
@@ -43,5 +48,6 @@ async def test_notion_create_task():
 @pytest.mark.asyncio
 async def test_zapier_perform_action():
     params = {"x": 2}
-    result = await zapier_adapter.perform_action(params)
+    token_manager.set_token("u1", "zapier", "t")
+    result = await zapier_adapter.perform_action("u1", params)
     assert result == {"message": "בוצעה פעולה דרך Zapier", "params": params}
