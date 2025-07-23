@@ -28,10 +28,16 @@ fastapi.HTTPException = DummyHTTPException
 
 # Minimal FastAPI stub so modules importing FastAPI don't fail
 class DummyFastAPI:
+    def __init__(self):
+        self.middlewares = []
+
     def post(self, path):
         def decorator(func):
             return func
         return decorator
+
+    def add_middleware(self, middleware_class, **options):
+        self.middlewares.append((middleware_class, options))
 
 fastapi.FastAPI = DummyFastAPI
 
