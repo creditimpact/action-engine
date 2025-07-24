@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import JSONResponse
 from action_engine.router import route_action
 from action_engine.validator import ActionRequest
+from action_engine.config import API_KEY
 
 from action_engine.logging.logger import (
     get_logger,
@@ -9,8 +10,6 @@ from action_engine.logging.logger import (
     RequestIdMiddleware,
 )
 from action_engine.auth import token_manager
-
-API_KEY = "testkey"
 
 app = FastAPI()
 app.add_middleware(RequestIdMiddleware)

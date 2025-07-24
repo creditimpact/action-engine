@@ -82,6 +82,9 @@ async def route_action(data):
             extra={"platform": platform, "action_type": action_type, "request_id": request_id},
         )
         return JSONResponse(content={"status": "success", "result": result})
+    except HTTPException as exc:
+        logger.info("Execution error", extra={"error": exc.detail, "request_id": request_id})
+        return JSONResponse(content={"error": exc.detail}, status_code=exc.status_code)
     except Exception as e:
         logger.info("Execution error", extra={"error": str(e), "request_id": request_id})
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
