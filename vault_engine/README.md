@@ -1,86 +1,97 @@
 # Vault Engine
 
-The Vault is PURAIFI's secure storage service for all user-level authorization data. Other engines (such as the Action and Sync engines) rely on the Vault to access OAuth tokens and connection metadata without handling secrets directly.
+## 1. Introduction – What is the Vault?
+PURAIFI Vault Engine is a dedicated microservice for securely managing OAuth credentials and platform profiles. It acts as the single source of truth for access and refresh tokens that other engines use when performing actions on a user's behalf. The service exposes only internal APIs—there are no user-facing endpoints—and every call is authenticated and logged. By isolating credential storage, the system enforces full Zero Trust principles and ensures that secrets never travel outside the vault without auditing.
 
-## Overview & Role
-- Stores encrypted OAuth access and refresh tokens along with platform scopes and expiration times.
-- Maintains the connection status for each platform per user so other engines can determine if they can operate on the user's behalf.
-- Provides a stateless REST API that only other engines may call. There are no direct user-facing endpoints.
+## 2. Responsibilities & What It Stores
+The vault keeps a per-user, per-platform record of:
 
-## What It Stores
-- OAuth tokens for Google, Slack, Notion and other platforms.
-- Token expiry times and granted scopes.
-- Per-user encryption keys and session information (never raw passwords).
+- OAuth access and refresh tokens
+- Expiration timestamps and granted scopes
+- Encrypted keys derived from each user
+- Status indicators for every platform (`connected`, `expired`, `missing`)
+- Platform profile data (Google, Notion, Slack, etc.) used for refresh logic
 
-## Core Functions
-- Securely store and retrieve tokens.
-- Refresh expired tokens when possible.
-- Report the connection status of each platform for a user.
-- Supply the Sync engine with an integration map describing which services are connected.
+Passwords are never stored; only the tokens issued by each platform are persisted.
 
-## API Responsibilities
-All requests must include `X-Engine-ID` and `X-Engine-Key` headers identifying the calling engine. The current endpoints are:
+## 3. Data Flow: How the Vault Works
 
-| Method & Path      | Description                              |
-|--------------------|------------------------------------------|
-| `POST /store_token`| Store or update a token for a user.      |
-| `POST /get_token`  | Retrieve (and refresh if needed) a token.|
-| `GET  /status`     | Return connection status for each platform for a user.|
-| *(internal)*       | Platform map generation for the Sync engine.|
+### a. Store token
+An engine sends token details along with the user and platform:
 
-Each endpoint returns a JSON response.
+```json
+{
+  "user_id": "u1",
+  "platform": "gmail",
+  "access_token": "abcd",
+  "refresh_token": "r1",
+  "expires_at": 1700000000,
+  "scopes": ["email"]
+}
+```
+The vault encrypts and stores this under the key `u1:gmail` and marks Gmail as active for that user.
 
-## Architecture
-- Stateless FastAPI application.
-- Authentication enforced by `auth_middleware.py` for each engine.
-- Tokens stored in Redis and encrypted using AES‑256 via `token_encryptor.py`. The system is designed for a double layer of encryption so secrets never appear in plaintext.
-- Access is separated per user and per platform key (`<user_id>:<platform>`).
-- Extensive logging using `vault_logger.py` attaches a UUID request ID to every operation.
+### b. Get token
+When another engine needs a token it calls `/get_token` with the same identifiers. The vault validates the caller, checks expiry, and either returns the stored credentials or refreshes them first if possible.
 
-## Modules & Files
-- `vault_api.py` – HTTP API definitions.
-- `auth_middleware.py` – validates engine credentials for every request.
-- `vault_storage.py` – Redis based encrypted token store.
-- `token_encryptor.py` – AES encryption helper.
-- `token_refresher.py` – refresh logic for expired tokens.
-- `connection_checker.py` – determines connection health per platform.
-- `vault_logger.py` – JSON logging with request ID context.
-- `platform_profiles/` – YAML files describing OAuth details for supported platforms.
+### c. Get status
+A status request returns a map of platforms for the user:
 
-## Configuration
-The service requires the following environment variables:
+```json
+{
+  "connected_platforms": [
+    { "platform": "Gmail", "status": "active" },
+    { "platform": "Notion", "status": "missing" }
+  ]
+}
+```
 
-- `VAULT_REDIS_URL` – connection string for the Redis instance.
-- `VAULT_ENCRYPTION_KEY` – 32‑byte key used for AES‑256 encryption.
-- `VAULT_ENCRYPTION_IV` – 16‑byte initialization vector.
-- `ACTION_ENGINE_KEY` – shared secret for the Action engine.
-- `SYNC_ENGINE_KEY` – shared secret for the Sync engine.
-- `LOCAL_ENGINE_KEY` – optional secret for local/testing access.
+### d. Auto-refresh
+If a retrieved token has expired and a refresh token is present, the vault performs a refresh before responding, storing the new data automatically.
 
-## Running Locally
-Install dependencies and launch the FastAPI app using Uvicorn:
+## 4. Internal Architecture
+| Module | Purpose |
+| ------ | ------- |
+| `vault_api.py` | REST API handlers |
+| `auth_middleware.py` | Enforces engine authentication headers |
+| `vault_storage.py` | Reads/writes encrypted tokens |
+| `token_encryptor.py` | AES‑256 encryption/decryption helpers |
+| `token_refresher.py` | Refresh logic for expired tokens |
+| `connection_checker.py` | Reports connection health |
+| `platform_profiles/` | YAML configs per supported platform |
+
+Tokens are stored by key `<user_id>:<platform>`. Each token string is first encrypted with AES and then with a KMS‑managed key before being persisted to the backend store (Redis, DynamoDB, or PostgreSQL).
+
+## 5. Security Model & Zero Trust
+Only approved engines—`action`, `sync`, or `local`—may call the vault. Every request must include `X-Engine-ID` and `X-Engine-Key` headers which are checked by `auth_middleware.py`. All operations are logged with a request ID, user ID, platform, timestamp, action type, and result. Calls are specific to a given user and platform; generic token access is not possible.
+
+## 6. Integration Map (for Sync Engine)
+The sync engine queries the vault for the latest status of every platform a user has connected. The vault replies with a complete snapshot so Sync can determine which services need re‑authentication, which are ready for use, and which have never been connected. Vault provides raw status information while Sync interprets it and surfaces prompts to the user.
+
+## 7. Error Handling & Resilience
+Failures such as expired credentials, unauthorized engines, or storage errors return structured responses:
+
+```json
+{ "error_code": "expired_token", "message": "Token needs refresh", "suggested_action": "reauth" }
+```
+The vault retries transient storage issues and emits structured JSON logs (CloudWatch/Elastic ready) for monitoring.
+
+## 8. Scaling & Performance
+Vault Engine is a stateless FastAPI application that can scale horizontally behind a load balancer. Tokens reside in an encrypted database (Redis cluster, Dynamo, etc.) so any instance can handle requests. Token operations are cached and designed to be sub‑second. Logs are formatted for real‑time telemetry pipelines.
+
+## 9. Running Locally (dev setup)
+Install dependencies and start the service:
 
 ```bash
 pip install fastapi uvicorn redis
 uvicorn vault_engine.vault_api:app --reload
 ```
 
-## Integration with the Sync Engine
-The Sync engine queries the Vault to obtain connection health and build a user's integration map. This enables local prompts or re‑authentication flows whenever tokens expire or permissions change.
-
-## Scaling & Resilience
-- Multiple Vault instances can run behind a load balancer.
-- The encrypted store can be backed by Redis, Dynamo or another scalable database.
-- Logs are output in JSON and suitable for ingestion by Elastic, Loki or CloudWatch.
-- Retrieval and refresh operations aim to complete in milliseconds to minimize latency for dependent engines.
-
-## Insight Generation (Future)
-While not currently enabled, the Vault can analyze logs to detect repeated OAuth failures and trends in token expiry. These insights can help surface reconnection prompts in the local UX.
-
-## Testing
-Run unit tests from the repository root:
+Run unit tests with:
 
 ```bash
 pytest vault_engine/tests
 ```
 
+## 10. Roadmap & Insights
+Future extensions may include analytics over log data (e.g. "Google tokens often fail to refresh"), detecting partial user connection flows, and tighter integration with Sync Engine to proactively prompt users when credentials lapse.
