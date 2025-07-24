@@ -1,87 +1,175 @@
-# Engine Control
+# 🧠 Engine Control – Central Coordination Service for PURAIFI
 
-Engine Control is the central coordination service for all engines in PURAIFI. It manages engine registration, platform availability and system policies rather than performing actions itself.
+**Engine Control** is the central orchestrator in the PURAIFI system.  
+It governs **which engines may perform which actions**, enforces platform-level policies, and logs system-wide activity.  
+This service does **not perform any direct actions** – it acts as the policy gatekeeper for all execution engines.
 
-## Overview & Role
+---
 
-Engine Control acts as the meta-engine that governs what other engines may do. Engines authenticate to this service in order to register themselves, retrieve configuration, and check permissions before carrying out tasks on external platforms. The service is stateless and designed to run as a cloud API reachable by all engines but not by end users.
+## 🧭 Role in the PURAIFI System
 
-Main responsibilities include:
+Engine Control serves as the meta-engine that ensures order and safety across the system.
 
-- Registering and validating engines
-- Controlling the list of supported platforms and their statuses
-- Checking whether an action is allowed for a particular engine
-- Storing global feature flags and API versions
-- Logging engine activity for auditing purposes
+It handles:
+- 🔐 **Engine authentication and registration**
+- ✅ **Permission checks** for every action attempt
+- 📡 **Platform availability and version flags**
+- 📊 **Logging and observability for auditing and metrics**
 
-## System Context
+> No engine is implicitly trusted. Each action must be explicitly authorized.
 
-Engine Control runs as a standalone HTTP service. Other engines such as the Action Engine or Vault Engine query it via REST or gRPC to verify whether they are allowed to perform a given operation. No engine is implicitly trusted; each request requires the caller to present its engine ID and secret key.
+---
 
-## Core API Endpoints
+## 🔁 Common Flows
 
-The service exposes several endpoints to handle registration, permission checks and configuration. Example routes are shown below.
+### 🔧 Engine Registration Flow
 
-| Endpoint | Method | Description |
-| --- | --- | --- |
-| `/engines/register` | `POST` | Register a new engine and define its permissions and dependencies. Returns a token used for future calls. |
-| `/engines/validate` | `POST` | Validate an engine's identity using its token. Used by engines to confirm they are recognised. |
-| `/actions/check` | `POST` | Determine whether a given engine can perform an action on a platform. Also returns any required scopes. |
-| `/platforms/list` | `GET` | List available platforms with their current status (`active`, `maintenance`, `deprecated`). |
-| `/config/global` | `GET` | Fetch global feature flags and API version information. |
-| `/log/engine_event` | `POST` | Submit event logs such as errors or metrics for aggregation. |
+1. New engine calls `POST /engines/register` with its desired capabilities.
+2. Engine Control returns an engine token (secret key).
+3. The engine includes this token in `X-Engine-ID` and `X-Engine-Key` headers on every future request.
 
-### Example flow: registering an engine
+### ✅ Permission Check Flow
 
-1. A new engine sends a `POST /engines/register` request with its desired permissions.
-2. Engine Control stores the engine entry and returns a unique authentication token.
-3. The engine uses this token for subsequent calls via the `X-Engine-ID` and `X-Engine-Key` headers.
-
-### Example flow: requesting permission for an action
-
-1. Before performing an action, the engine calls `POST /actions/check` with its engine ID, the target platform and the action type.
-2. Engine Control verifies the engine's registration, platform status and permission set.
-3. A response is returned indicating whether the action is allowed and which scopes are required.
-
-### Handling platform maintenance
-
-When a platform is put into maintenance mode via configuration, `POST /platforms/list` will show its status as `maintenance`. Permission checks for that platform will fail until the status is restored to `active`.
-
-## Permission & Policy Model
-
-Each engine is registered with a set of allowed platforms and actions. The service enforces these policies on every permission check. Dynamic feature flags can temporarily enable or disable platforms or specific use cases without requiring code changes.
-
-## Security Model
-
-Engine Control follows a zero-trust approach:
-
-- Requests must include a valid engine ID and token.
-- Permissions are checked for every action; lack of permission results in denial.
-- All operations are logged with request IDs to provide a full audit trail.
-
-There is no implicit trust between engines. Even internal calls are authenticated and logged.
-
-## Scalability & Extensibility
-
-The API is stateless and suitable for horizontal scaling behind a load balancer. Engines can be onboarded dynamically by calling the registration endpoint, and platform statuses can be updated without redeploying. Responses are version-aware so that outdated clients can be warned when new features become available.
-
-## Internal Logic
-
-While the public API focuses on configuration and authorization, internally the service maintains in‑memory stores for engines and platform status. Each request goes through an authentication middleware that validates the `X-Engine-ID` and `X-Engine-Key` headers. Permission checks combine the engine's stored permissions with the platform status to decide whether an action is allowed. All endpoints use a JSON logger that attaches a per‑request UUID for traceability.
-
-## Sample Development Setup
-
-1. Install requirements:
-
-   ```bash
-   pip install fastapi uvicorn
+1. Engine wants to execute an action (e.g., send email).
+2. It calls `POST /actions/check` with:
+   ```json
+   {
+     "engine_id": "action",
+     "platform": "gmail",
+     "action_type": "send_email"
+   }
+   ```
+3. Engine Control responds:
+   ```json
+   {
+     "allowed": true,
+     "required_scopes": ["mail.send"]
+   }
    ```
 
-2. Start the service:
+If the platform is under maintenance or the engine lacks permission → `allowed: false`.
 
-   ```bash
-   uvicorn engine_control.main:app --reload
-   ```
+---
 
-Other engines can then send HTTP requests to this local instance. Tests can be run with `pytest` from the repository root.
+## 📦 Folder Structure (Example)
 
+```
+engine_control/
+├── main.py                # FastAPI app entry point
+├── auth_middleware.py     # Validates engine ID and token
+├── permissions.py         # Permission model + enforcement logic
+├── platform_status.py     # Tracks platform availability
+├── config_manager.py      # Feature flags and API versions
+├── logger.py              # JSON structured logger with request_id
+├── engine_registry.py     # Manages engine registration and tokens
+├── routes/                # API route handlers
+│   ├── register.py
+│   ├── check_permissions.py
+│   ├── list_platforms.py
+│   ├── config.py
+│   └── log_event.py
+└── tests/
+    └── test_permissions.py
+```
+
+---
+
+## ⚙️ API Endpoints
+
+| Endpoint               | Method | Purpose                                           |
+|------------------------|--------|---------------------------------------------------|
+| `/engines/register`    | POST   | Register a new engine with its permissions        |
+| `/engines/validate`    | POST   | Verify an engine’s identity using token           |
+| `/actions/check`       | POST   | Check if an engine is allowed to perform an action|
+| `/platforms/list`      | GET    | View available platforms and their statuses       |
+| `/config/global`       | GET    | Get feature flags and API version info            |
+| `/log/engine_event`    | POST   | Submit logs or events for central collection      |
+
+> All requests require headers:  
+> `X-Engine-ID: <engine_name>`  
+> `X-Engine-Key: <engine_secret>`
+
+---
+
+## 🔐 Permission & Policy Model
+
+Each engine has:
+- Allowed platforms (e.g. Gmail, Slack)
+- Allowed actions per platform (e.g. `send_email`, `create_event`)
+- Dynamic feature flags that enable/disable actions without redeploying
+
+Every `check` request verifies:
+- The engine’s identity (auth)
+- Whether the action is in its permission set
+- Whether the platform is available (e.g. not in `maintenance` mode)
+
+---
+
+## 🛡️ Security Model
+
+Engine Control enforces a **Zero Trust** architecture:
+
+- No engine is trusted by default
+- Tokens are required and validated on each request
+- Permissions are re-evaluated for every action
+- Logs are recorded for traceability (with `request_id`, engine, action, result)
+
+Even internal calls between engines are **authenticated and logged**.
+
+---
+
+## 📈 Scalability & Reliability
+
+- Fully stateless – can run behind a load balancer
+- In-memory cache for quick access to engine and platform data
+- Real-time updates to platform status and config without restart
+- Versioned API responses for future-proof compatibility
+
+---
+
+## 🧪 Local Development
+
+### Install dependencies:
+```bash
+pip install fastapi uvicorn
+```
+
+### Run the service:
+```bash
+uvicorn engine_control.main:app --reload
+```
+
+Other engines can now make HTTP requests to `localhost:8000`.  
+Run tests with:
+
+```bash
+pytest engine_control/tests
+```
+
+---
+
+## 📊 Logging & Observability
+
+Each API call is logged in structured JSON format with:
+
+- `request_id`
+- `engine_id`
+- `platform`
+- `action_type`
+- `status`: allowed / denied / error
+- `timestamp`
+
+These logs enable full auditability and system-level behavior tracking.
+
+---
+
+## 🧠 Summary
+
+Engine Control is:
+- The **policy brain** of PURAIFI’s distributed engine system
+- Responsible for verifying, gating and auditing all external actions
+- A central hub for platform status, API governance and feature flags
+
+It ensures PURAIFI can scale safely while retaining fine-grained control over every action.
+
+---
