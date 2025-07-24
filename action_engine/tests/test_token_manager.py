@@ -1,3 +1,5 @@
+import json
+import time
 import pytest
 from action_engine.auth import token_manager
 from action_engine.tests.conftest import DummyRedis
@@ -43,3 +45,31 @@ async def test_refresh_if_needed():
     await token_manager.set_token("u", "gmail", expired)
     token = await token_manager.get_access_token("u", "gmail")
     assert token.startswith("refreshed-")
+
+
+@pytest.mark.asyncio
+async def test_refresh_encrypted_token():
+    await token_manager.init_redis(DummyRedis())
+    past = time.time() - 1
+    token_data = {
+        "access_token": "old", 
+        "refresh_token": "r1", 
+        "expires_at": past,
+    }
+    encoded = token_manager._encrypt(json.dumps(token_data))
+    await token_manager._redis_client.set("u:gmail", encoded)
+    token = await token_manager.get_access_token("u", "gmail")
+    assert token.startswith("refreshed-")
+
+
+@pytest.mark.asyncio
+async def test_no_refresh_without_expires_at():
+    await token_manager.init_redis(DummyRedis())
+    data = {
+        "access_token": "curr",
+        "refresh_token": "r2",
+    }
+    encoded = token_manager._encrypt(json.dumps(data))
+    await token_manager._redis_client.set("u:gmail", encoded)
+    token = await token_manager.get_access_token("u", "gmail")
+    assert token == "curr"
