@@ -1,66 +1,78 @@
 # Action Engine
 
-Action Engine is a lightweight FastAPI service for routing automation requests to various platforms. Requests are parsed and forwarded to platform specific adapters located in `action_engine/adapters`.
+## 1. Introduction
 
-## Folder structure
+The Action Engine is the execution layer of PURAIFI. It receives structured action templates from other services and carries out the requested operations against external platforms. It does not decide *what* to do—only *how* to do it once given a task. Typical actions include sending an email via Gmail, creating a Notion task or triggering a Zapier workflow. In the broader PURAIFI system, this engine acts as the bridge between high-level automation logic and concrete API calls.
 
-- `action_engine/main.py` – FastAPI application entry point.
-- `action_engine/router.py` – routes requests to the correct adapter.
-- `action_engine/adapters/` – adapters for external platforms such as Gmail, Notion, Google Calendar and Zapier.
-- `action_engine/actions_registry.py` – registry describing available actions per platform.
-- Other directories (`auth`, `logging`, `tests`, `utils`) contain placeholder modules for future extensions.
+## 2. How It Works – Flow Overview
 
-## Running the app
+1. A local system or orchestrator sends an action template to `/perform_action`.
+2. The engine validates the caller's token using the Vault Engine.
+3. The JSON payload is parsed into an internal `ActionModel`.
+4. A matching adapter is chosen based on the target platform.
+5. The adapter performs the external API call.
+6. A standardized success or error result is returned.
 
-1. Install dependencies (for example with pip):
+Example request:
 
-   ```bash
-   pip install fastapi uvicorn
-   ```
+```json
+{
+  "user_id": "u1",
+  "platform": "gmail",
+  "action_type": "send_email",
+  "payload": {"to": "user@example.com"}
+}
+```
 
-2. Start the FastAPI server with Uvicorn from the repository root:
+Example response:
 
-   ```bash
-   uvicorn action_engine.main:app --reload
-   ```
+```json
+{
+  "status": "success",
+  "result": {"message": "Email sent successfully"}
+}
+```
 
-Use `/login` to obtain a bearer token for a given `user_id`. Include this token in the `Authorization` header when calling other endpoints.
+## 3. Architecture and Folder Structure
 
-The API exposes a `/perform_action` endpoint that accepts a JSON payload with `platform`, `action_type` and `payload` fields.
+```
+action_engine/
+├─ main.py            – FastAPI application entry point
+├─ router.py          – routes validated actions to adapters
+├─ action_parser.py   – builds ActionModel objects
+├─ executor.py        – helper for executing ActionModel instances
+├─ adapters/          – platform specific integrations
+├─ auth/              – JWT & OAuth helpers
+├─ logging/           – request logging utilities
+└─ tests/             – unit tests
+```
 
-## Supported platforms and actions
+`actions_registry.py` defines which actions are available per platform. The modular layout makes it easy to add new adapters or extend existing ones.
 
-The currently registered platforms and actions are defined in `actions_registry.py`:
+## 4. OAuth & Authentication
 
-- **gmail**: `perform_action`
+Authentication tokens are issued via `/login`. Some platforms require OAuth:
+
+- `POST /auth/start` – begin the OAuth flow and receive an authorization URL.
+- `POST /auth/callback` – handle the callback and store tokens securely in the Vault Engine.
+
+Adapters fetch tokens from Vault as needed; no long‑term credentials are stored inside the service.
+
+## 5. Supported Platforms & Actions
+
+The registry currently includes:
+
+- **gmail**: `send_email`
 - **google_calendar**: `create_event`
 - **notion**: `create_task`
-- **zapier**: `perform_action`
+- **zapier**: `trigger_zap`
 
-Additional adapter functions (e.g. `send_email` in the Gmail adapter) can be used by calling the relevant function names via the API.
+Developers can extend the engine by adding new adapters and registering additional actions in `actions_registry.py`.
 
-## Initiating OAuth
+## 6. Error Handling & Monitoring
 
-Some adapters require OAuth tokens. Use the `/auth/start` and `/auth/callback` endpoints to complete the flow. Authenticate requests using a bearer token obtained from the `/login` endpoint:
+API errors, invalid input and token issues are caught and returned as structured JSON. Each request is logged with a `request_id`, `user_id` and timestamp. The engine never crashes on bad data—it always responds with either a success object or an error description.
 
-1. **Start authorization**
+## 7. Future Capabilities
 
-   ```bash
-   curl -X POST http://localhost:8000/auth/start \
-        -H "Authorization: Bearer <token>" \
-        -d '{"user_id": "u1", "platform": "gmail", "client_id": "id", "client_secret": "secret", "redirect_uri": "https://app/callback"}'
-   ```
-
-   The response contains `authorization_url` that the user should visit.
-
-2. **Handle the callback**
-
-   After the user authorizes the application, POST the received information to `/auth/callback`:
-
-   ```bash
-   curl -X POST http://localhost:8000/auth/callback \
-        -H "Authorization: Bearer <token>" \
-        -d '{"user_id": "u1", "platform": "gmail", "client_id": "id", "client_secret": "secret", "redirect_uri": "https://app/callback", "authorization_response": "..."}'
-   ```
-
-   On success the access and refresh tokens are stored and can be retrieved by the adapters when performing actions.
+Upcoming features include support for scheduled actions, conditional execution, multi‑step sequences and robust callbacks with retry logic.
