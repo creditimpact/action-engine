@@ -39,6 +39,11 @@ class DummyFastAPI:
             return func
         return decorator
 
+    def get(self, path):
+        def decorator(func):
+            return func
+        return decorator
+
     def add_middleware(self, middleware_class, **options):
         self.middlewares.append((middleware_class, options))
 
