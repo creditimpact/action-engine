@@ -21,7 +21,7 @@ def make_payload(platform="gmail"):
 async def test_route_gmail_success():
     await token_manager.init_redis(DummyRedis())
     payload = make_payload("gmail")
-    await token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", {"access_token": "t"})
     response = await router.route_action({
         "platform": "gmail",
         "action_type": "perform_action",
@@ -41,7 +41,7 @@ async def test_route_gmail_success():
 async def test_route_google_calendar_success():
     await token_manager.init_redis(DummyRedis())
     payload = make_payload("google_calendar")
-    await token_manager.set_token("u1", "google_calendar", "t")
+    await token_manager.set_token("u1", "google_calendar", {"access_token": "t"})
     response = await router.route_action({
         "platform": "google_calendar",
         "action_type": "create_event",
@@ -63,7 +63,7 @@ async def test_route_google_calendar_success():
 async def test_route_notion_success():
     await token_manager.init_redis(DummyRedis())
     payload = make_payload("notion")
-    await token_manager.set_token("u1", "notion", "t")
+    await token_manager.set_token("u1", "notion", {"access_token": "t"})
     response = await router.route_action({
         "platform": "notion",
         "action_type": "create_task",
@@ -85,7 +85,7 @@ async def test_route_notion_success():
 async def test_route_zapier_success():
     await token_manager.init_redis(DummyRedis())
     payload = make_payload("zapier")
-    await token_manager.set_token("u1", "zapier", "t")
+    await token_manager.set_token("u1", "zapier", {"access_token": "t"})
     response = await router.route_action({
         "platform": "zapier",
         "action_type": "perform_action",
@@ -128,7 +128,7 @@ async def test_unknown_action_error():
 @pytest.mark.asyncio
 async def test_adapter_validation_error():
     await token_manager.init_redis(DummyRedis())
-    await token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", {"access_token": "t"})
     response = await router.route_action({
         "platform": "gmail",
         "action_type": "perform_action",

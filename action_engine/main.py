@@ -44,7 +44,7 @@ async def save_token(data: dict, x_api_key: str = Header(None)):
         )
         return JSONResponse(content={"error": detail}, status_code=400)
 
-    await token_manager.set_token(user_id, platform, access_token)
+    await token_manager.set_token(user_id, platform, {"access_token": access_token})
     logger.info(
         "Token stored",
         extra={"user_id": user_id, "platform": platform, "request_id": get_request_id()},

@@ -28,7 +28,7 @@ def _validate(payload: dict, model: type[BaseModel]) -> BaseModel:
 async def perform_action(user_id: str, params: dict):
     """Mock action execution for Gmail."""
     _validate(params, GmailPerformActionPayload)
-    token = await token_manager.get_token(user_id, "gmail")
+    token = await token_manager.get_access_token(user_id, "gmail")
     if not token:
         logger.info(
             "Gmail token missing",
@@ -51,7 +51,7 @@ async def send_email(user_id: str, payload: dict) -> dict:
     """
     _validate(payload, GmailSendEmailPayload)
     # Basic logging for action invocation
-    token = await token_manager.get_token(user_id, "gmail")
+    token = await token_manager.get_access_token(user_id, "gmail")
     if not token:
         logger.info(
             "Gmail token missing",

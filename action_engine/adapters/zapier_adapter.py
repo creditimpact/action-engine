@@ -21,7 +21,7 @@ def _validate(payload: dict, model: type[BaseModel]) -> BaseModel:
 async def perform_action(user_id: str, params: dict):
     """Mock integration with Zapier Webhook / Trigger."""
     _validate(params, PerformActionPayload)
-    token = await token_manager.get_token(user_id, "zapier")
+    token = await token_manager.get_access_token(user_id, "zapier")
     if not token:
         logger.info(
             "Zapier token missing",
@@ -39,7 +39,7 @@ async def perform_action(user_id: str, params: dict):
 async def trigger_zap(user_id: str, payload: dict) -> dict:
     """Trigger a Zap via webhook (mocked)."""
     _validate(payload, PerformActionPayload)
-    token = await token_manager.get_token(user_id, "zapier")
+    token = await token_manager.get_access_token(user_id, "zapier")
     if not token:
         logger.info(
             "Zapier token missing",
