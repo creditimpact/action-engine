@@ -17,7 +17,7 @@ async def test_status_endpoint_unauthorized():
 @pytest.mark.asyncio
 async def test_status_endpoint_authorized(monkeypatch):
     """Authorized requests return statuses from connection_checker.get_status."""
-    statuses = {"google": "connected", "slack": "missing"}
+    statuses = {"google": "active", "slack": "not_connected"}
     called = {}
 
     async def fake_get_status(user_id: str):
@@ -34,4 +34,10 @@ async def test_status_endpoint_authorized(monkeypatch):
     )
     assert called["user_id"] == "u1"
     assert resp.status_code == 200
-    assert resp.content == statuses
+    expected = {
+        "connected_platforms": [
+            {"platform": "google", "status": "active"},
+            {"platform": "slack", "status": "not_connected"},
+        ]
+    }
+    assert resp.content == expected

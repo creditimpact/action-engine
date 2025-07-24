@@ -11,11 +11,11 @@ async def get_status(user_id: str) -> Dict[str, str]:
     for platform in platforms:
         token = await retrieve_token(user_id, platform)
         if not token:
-            statuses[platform] = "missing"
+            statuses[platform] = "not_connected"
             continue
         expires_at = token.get("expires_at")
         if expires_at and time.time() >= float(expires_at):
-            statuses[platform] = "expired"
+            statuses[platform] = "token_expired"
         else:
-            statuses[platform] = "connected"
+            statuses[platform] = "active"
     return statuses

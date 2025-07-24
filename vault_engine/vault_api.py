@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
+import time
 
 from .auth_middleware import verify_engine
 from .vault_storage import store_token, retrieve_token
@@ -21,10 +22,19 @@ async def store_token_endpoint(
     verify_engine(x_engine_id, x_engine_key)
     user_id = data.get("user_id")
     platform = data.get("platform")
-    access_token = data.get("access_token")
-    refresh_token = data.get("refresh_token")
-    expires_at = data.get("expires_at")
-    scopes = data.get("scopes", [])
+
+    token_payload = data.get("token", data)
+    access_token = token_payload.get("access_token")
+    refresh_token = token_payload.get("refresh_token")
+    expires_at = token_payload.get("expires_at")
+    expires_in = token_payload.get("expires_in")
+    scopes = token_payload.get("scopes", [])
+
+    if expires_at is None and expires_in is not None:
+        try:
+            expires_at = time.time() + float(expires_in)
+        except Exception:
+            expires_at = None
 
     if not all(isinstance(v, str) and v for v in (user_id, platform, access_token)):
         raise HTTPException(status_code=400, detail="Invalid token payload")
@@ -73,4 +83,7 @@ async def status_endpoint(
         "Status retrieved",
         extra={"user_id": user_id, "request_id": get_request_id()},
     )
-    return JSONResponse(statuses)
+    connected_platforms = [
+        {"platform": p, "status": s} for p, s in statuses.items()
+    ]
+    return JSONResponse({"connected_platforms": connected_platforms})
