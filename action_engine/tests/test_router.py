@@ -1,7 +1,22 @@
 import importlib
+import io
+import urllib.error
 import pytest
+import action_engine.adapters as adapters
 from action_engine.auth import token_manager
 from action_engine.tests.conftest import DummyRedis
+
+
+class DummyResponse:
+    def __init__(self, code: int = 200, data: bytes | None = None):
+        self._code = code
+        self._data = data or b"{}"
+
+    def getcode(self):
+        return self._code
+
+    def read(self):
+        return self._data
 
 # Import router after fastapi stub is set up in conftest
 router = importlib.import_module("action_engine.router")
@@ -18,10 +33,11 @@ def make_payload(platform="gmail"):
     return {}
 
 @pytest.mark.asyncio
-async def test_route_gmail_success():
+async def test_route_gmail_success(monkeypatch):
     await token_manager.init_redis(DummyRedis())
     payload = make_payload("gmail")
     await token_manager.set_token("u1", "gmail", "t")
+    monkeypatch.setattr(adapters.urllib.request, "urlopen", lambda req: DummyResponse())
     response = await router.route_action({
         "platform": "gmail",
         "action_type": "perform_action",
@@ -136,3 +152,24 @@ async def test_adapter_validation_error():
         "payload": {},
     })
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_http_error_propagation(monkeypatch):
+    await token_manager.init_redis(DummyRedis())
+    await token_manager.set_token("u1", "gmail", "t")
+
+    def raise_error(req):
+        raise urllib.error.HTTPError(req.full_url, 403, "", None, io.BytesIO(b"denied"))
+
+    monkeypatch.setattr(adapters.urllib.request, "urlopen", raise_error)
+
+    response = await router.route_action({
+        "platform": "gmail",
+        "action_type": "perform_action",
+        "user_id": "u1",
+        "payload": {"key": "v"},
+    })
+
+    assert response.status_code == 403
+    assert "denied" in response.content["error"]
