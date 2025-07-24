@@ -6,6 +6,7 @@ from action_engine.adapters import (
     google_calendar_adapter,
     notion_adapter,
     zapier_adapter,
+    BaseAdapter,
 )
 from action_engine.auth import token_manager
 from action_engine.tests.conftest import DummyRedis
@@ -134,4 +135,40 @@ async def test_zapier_perform_action_validation_error():
     await token_manager.set_token("u1", "zapier", {"access_token": "t"})
     with pytest.raises(Exception):
         await zapier_adapter.perform_action("u1", {})
+
+
+@pytest.mark.asyncio
+async def test_base_adapter_timeout(monkeypatch):
+    adapter = BaseAdapter("dummy")
+
+    called = {}
+
+    class DummyResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            pass
+
+        def read(self):
+            return b"{}"
+
+    def fake_urlopen(req, timeout=None):
+        called["timeout"] = timeout
+        return DummyResp()
+
+    import action_engine.adapters.__init__ as base_mod
+
+    monkeypatch.setattr(base_mod.request, "urlopen", fake_urlopen)
+
+    coro = await adapter.send_http_request("GET", "http://x")
+    result = await coro
+    assert result == {}
+    assert called["timeout"] == 10.0
+
+    called.clear()
+    coro = await adapter.send_http_request("GET", "http://x", timeout=5)
+    result = await coro
+    assert result == {}
+    assert called["timeout"] == 5
 

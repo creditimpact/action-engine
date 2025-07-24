@@ -34,6 +34,7 @@ class BaseAdapter:
         url: str,
         headers: Optional[dict[str, str]] = None,
         data: Optional[Any] = None,
+        timeout: float = 10.0,
     ) -> Any:
         """Send an HTTP request asynchronously using urllib."""
 
@@ -50,7 +51,7 @@ class BaseAdapter:
                     body = data
             req = request.Request(url, data=body, headers=_headers, method=method)
             try:
-                with request.urlopen(req) as resp:
+                with request.urlopen(req, timeout=timeout) as resp:
                     resp_body = resp.read()
                     try:
                         return json.loads(resp_body)
@@ -65,8 +66,18 @@ class BaseAdapter:
         return await loop.run_in_executor(None, _do_request)
 
     async def post(
-        self, url: str, headers: Optional[dict[str, str]] = None, data: Optional[Any] = None
+        self,
+        url: str,
+        headers: Optional[dict[str, str]] = None,
+        data: Optional[Any] = None,
+        timeout: float = 10.0,
     ) -> Any:
-        return await self.send_http_request("POST", url, headers=headers, data=data)
+        return await self.send_http_request(
+            "POST",
+            url,
+            headers=headers,
+            data=data,
+            timeout=timeout,
+        )
 
 __all__ = ["BaseAdapter"]
