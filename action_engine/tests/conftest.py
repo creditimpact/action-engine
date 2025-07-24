@@ -90,3 +90,17 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "asyncio: mark test to run asynchronously using asyncio.run"
     )
+
+
+class DummyRedis:
+    def __init__(self):
+        self.store = {}
+
+    async def ping(self):  # pragma: no cover - simple stub
+        return True
+
+    async def get(self, key):
+        return self.store.get(key)
+
+    async def set(self, key, value):
+        self.store[key] = value
