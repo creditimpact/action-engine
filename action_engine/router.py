@@ -7,23 +7,13 @@ from action_engine.validator import validate_request
 from action_engine.action_parser import parse_request
 
 # ייבוא אדפטרים
-from action_engine.adapters import (
-    gmail_adapter,
-    google_calendar_adapter,
-    notion_adapter,
-    zapier_adapter,
+from action_engine.actions_registry import (
+    get_action_function,
+    supported_actions,
 )
-from action_engine.actions_registry import ACTIONS_REGISTRY
 
 logger = get_logger(__name__)
 
-# מילון שמתאים בין פלטפורמות למודולים
-adapter_registry = {
-    "gmail": gmail_adapter,
-    "google_calendar": google_calendar_adapter,
-    "notion": notion_adapter,
-    "zapier": zapier_adapter,
-}
 
 async def route_action(data):
     request_id = get_request_id()
@@ -43,17 +33,15 @@ async def route_action(data):
     if platform == "test":
         return JSONResponse(content={"message": "המערכת עובדת 🎯"})
 
-    if not platform or platform not in adapter_registry:
+    if not platform or not list(supported_actions(platform)):
         logger.info("Unsupported platform", extra={"platform": platform, "request_id": request_id})
         return JSONResponse(
             content={"error": f"פלטפורמה לא תקינה או לא נתמכת: '{platform}'"},
             status_code=400
         )
 
-    adapter_module = adapter_registry[platform]
-
     # מנסה למצוא את הפונקציה המתאימה לפעולה
-    action_func = getattr(adapter_module, action_type, None)
+    action_func = get_action_function(platform, action_type)
 
     if not action_func:
         logger.info(
@@ -65,7 +53,7 @@ async def route_action(data):
             status_code=400
         )
 
-    if action_type not in ACTIONS_REGISTRY.get(platform, []):
+    if action_type not in supported_actions(platform):
         logger.info(
             "Action not supported",
             extra={"action_type": action_type, "platform": platform, "request_id": request_id},
