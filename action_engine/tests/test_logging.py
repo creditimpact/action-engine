@@ -1,7 +1,7 @@
 import io
 import json
 import logging
-from action_engine.logging.logger import JsonFormatter
+from action_engine.logging.logger import JsonFormatter, get_logger
 
 
 def create_logger():
@@ -31,4 +31,18 @@ def test_formatter_without_request_id():
     assert data['message'] == 'hello'
     assert 'time' in data
     assert 'request_id' not in data
+
+
+def test_sanitize_token_filter_replaces_sensitive_values():
+    """Logger obtained via get_logger should mask token-like fields."""
+    logger = get_logger('token_test_logger')
+    stream = io.StringIO()
+
+    handler = logger.handlers[0]
+    handler.stream = stream
+    handler.setFormatter(logging.Formatter('%(access_token)s %(refresh_token)s'))
+
+    logger.info('ignore', extra={'access_token': 'secret', 'refresh_token': 'r'})
+
+    assert stream.getvalue().strip() == '*** ***'
 
