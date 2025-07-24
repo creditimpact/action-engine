@@ -83,19 +83,24 @@ It does **not** interact with end-users directly.
 
 ```
 vault_engine/
-├── vault_api.py              # REST API entry point
-├── auth_middleware.py        # Validates engine identity
-├── vault_storage.py          # Stores encrypted tokens (Redis or DB)
-├── token_encryptor.py        # AES-256 encryption logic
-├── token_refresher.py        # Refresh logic for expired tokens
-├── connection_checker.py     # Platform connection status analyzer
-├── vault_logger.py           # JSON logging for all operations
-├── platform_profiles/        # YAML configs per platform
+├── vault_api.py           # FastAPI entry point
+├── auth_middleware.py     # Validates engine requests
+├── vault_storage.py       # Encrypted token store
+├── token_encryptor.py     # AES encryption helper
+├── token_refresher.py     # Refreshes tokens
+├── connection_checker.py  # Checks platform connectivity
+├── vault_logger.py        # Structured logging
+├── .env.example           # Sample environment variables
+├── .env                   # Local overrides
+├── platform_profiles/     # YAML configs per platform
 │   ├── google.yaml
-│   ├── slack.yaml
-│   └── notion.yaml
-└── tests/
-    └── test_token_flow.py
+│   ├── notion.yaml
+│   └── slack.yaml
+├── tests/                 # Unit tests
+│   ├── conftest.py
+│   ├── test_status_endpoint.py
+│   ├── test_store_retrieve.py
+│   └── test_token_refresh.py
 ```
 
 ---

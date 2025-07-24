@@ -64,14 +64,38 @@ This separation of concerns ensures:
 
 ```
 action_engine/
-├── main.py               # FastAPI app entry point
-├── router.py             # Route handling for action execution
-├── adapters/             # One module per platform (gmail, notion, zapier, etc.)
-├── actions_registry.py   # Maps platform + action_type to function
-├── auth/                 # OAuth and engine auth handling
-├── logging/              # Structured logging (JSON with request_id)
-├── utils/                # Helper functions
-├── tests/                # Unit tests
+├── main.py                # FastAPI app entry point
+├── router.py              # HTTP route handlers
+├── action_parser.py       # Parses incoming requests
+├── actions_registry.py    # Maps platform + action to adapter
+├── executor.py            # Executes formatted actions
+├── formatter.py           # Creates platform payloads
+├── validator.py           # Request validation logic
+├── config.py              # Engine configuration
+├── .env.example           # Sample environment variables
+├── .env                   # Local overrides
+├── adapters/              # Platform integrations
+│   ├── gmail_adapter.py
+│   ├── google_calendar_adapter.py
+│   ├── notion_adapter.py
+│   └── zapier_adapter.py
+├── auth/                  # OAuth and token utilities
+│   ├── jwt_manager.py
+│   ├── oauth_client.py
+│   └── token_manager.py
+├── logging/               # Structured logging
+│   └── logger.py
+├── utils/                 # Helper functions
+│   └── common.py
+├── tests/                 # Unit tests
+│   ├── conftest.py
+│   ├── test_adapters.py
+│   ├── test_auth.py
+│   ├── test_logging.py
+│   ├── test_oauth.py
+│   ├── test_router.py
+│   ├── test_router_concurrent.py
+│   └── test_token_manager.py
 ```
 
 ---

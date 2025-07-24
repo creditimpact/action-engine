@@ -51,25 +51,34 @@ If the platform is under maintenance or the engine lacks permission → `allowed
 
 ---
 
-## 📦 Folder Structure (Example)
+## 📦 Folder Structure
 
 ```
 engine_control/
 ├── main.py                # FastAPI app entry point
-├── auth_middleware.py     # Validates engine ID and token
-├── permissions.py         # Permission model + enforcement logic
-├── platform_status.py     # Tracks platform availability
-├── config_manager.py      # Feature flags and API versions
-├── logger.py              # JSON structured logger with request_id
-├── engine_registry.py     # Manages engine registration and tokens
-├── routes/                # API route handlers
-│   ├── register.py
-│   ├── check_permissions.py
-│   ├── list_platforms.py
-│   ├── config.py
-│   └── log_event.py
-└── tests/
-    └── test_permissions.py
+├── engine_api.py          # HTTP route handlers
+├── engine_config.py       # Engine configuration
+├── engine_registry.py     # Tracks registered engines
+├── permission_checker.py  # Authorization logic
+├── platform_registry.py   # Supported platforms list
+├── platform_config.py     # Platform settings
+├── auth_middleware.py     # Validates engine identity
+├── engine_logger.py       # Structured logging
+├── config.py              # Service configuration
+├── .env.example           # Sample environment variables
+├── .env                   # Local overrides
+├── schemas/               # Pydantic models
+│   ├── engine.py
+│   └── platform.py
+├── store/                 # In-memory data stores
+│   ├── engine_store.py
+│   └── platform_store.py
+├── tests/                 # Unit tests
+│   ├── conftest.py
+│   ├── test_action_check.py
+│   ├── test_authorization.py
+│   ├── test_engine_register.py
+│   └── test_platforms_list.py
 ```
 
 ---
