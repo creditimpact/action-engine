@@ -12,6 +12,7 @@ from action_engine.logging.logger import (
 )
 from action_engine.auth import token_manager
 from action_engine.auth.oauth_client import OAuthClient
+from action_engine import config
 
 app = FastAPI()
 app.add_middleware(RequestIdMiddleware)
@@ -33,6 +34,14 @@ def _get_user_id(authorization: str | None) -> str | None:
         return None
     token = authorization.split(" ", 1)[1]
     return verify_token(token)
+
+
+def build_oauth_client(platform: str) -> OAuthClient:
+    """Construct :class:`OAuthClient` based on configuration for ``platform``."""
+    cfg = config.get_oauth_config(platform)
+    if not all(cfg.get(k) for k in ("client_id", "client_secret", "redirect_uri")):
+        raise HTTPException(status_code=500, detail="OAuth configuration missing")
+    return OAuthClient(cfg["client_id"], cfg["client_secret"], cfg["redirect_uri"])
 
 
 @app.post("/perform_action")
@@ -84,26 +93,20 @@ async def start_oauth(data: dict, authorization: str = Header(None)):
 
     user_id = data.get("user_id")
     platform = data.get("platform")
-    client_id = data.get("client_id")
-    client_secret = data.get("client_secret")
-    redirect_uri = data.get("redirect_uri")
-    scope = data.get("scope", "")
-
-    if not all(
-        isinstance(v, str) and v
-        for v in (user_id, platform, client_id, client_secret, redirect_uri)
-    ):
-        detail = (
-            "Invalid OAuth request: 'user_id', 'platform', 'client_id', "
-            "'client_secret' and 'redirect_uri' are required"
-        )
+    if not all(isinstance(v, str) and v for v in (user_id, platform)):
+        detail = "Invalid OAuth request: 'user_id' and 'platform' are required"
         logger.info(
             "OAuth initiation validation error",
             extra={"user_id": user_id, "platform": platform, "request_id": get_request_id()},
         )
         return JSONResponse(content={"error": detail}, status_code=400)
 
-    oauth_client = OAuthClient(client_id, client_secret, redirect_uri)
+    try:
+        oauth_client = build_oauth_client(platform)
+    except HTTPException as exc:
+        return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
+
+    scope = config.get_oauth_config(platform).get("scope", "")
     auth_url = await oauth_client.initiate_authorization(scope)
     logger.info(
         "OAuth flow started",
