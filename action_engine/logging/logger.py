@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Any
-from datetime import datetime
+from datetime import datetime, timezone
 import contextvars
 import uuid
 
@@ -25,7 +25,7 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname,
             "name": record.name,
             "message": record.getMessage(),
-            "time": datetime.utcnow().isoformat(),
+            "time": datetime.now(timezone.utc).isoformat(),
         }
         if record.exc_info:
             log_record["exception"] = self.formatException(record.exc_info)
