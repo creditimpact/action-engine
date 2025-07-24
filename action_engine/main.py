@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 import json
 from action_engine.router import route_action
 from action_engine.validator import ActionRequest
-from action_engine.config import API_KEY
+from action_engine.auth.jwt_manager import create_token, verify_token
 
 from action_engine.logging.logger import (
     get_logger,
@@ -18,9 +18,29 @@ app.add_middleware(RequestIdMiddleware)
 logger = get_logger(__name__)
 
 
+@app.post("/login")
+async def login(data: dict):
+    """Issue a token for ``user_id``."""
+    user_id = data.get("user_id")
+    if not isinstance(user_id, str) or not user_id:
+        return JSONResponse({"error": "Invalid user_id"}, status_code=400)
+    token = create_token(user_id)
+    return JSONResponse({"token": token})
+
+
+def _get_user_id(authorization: str | None) -> str | None:
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1]
+    return verify_token(token)
+
+
 @app.post("/perform_action")
-async def perform_action(request: ActionRequest, x_api_key: str = Header(None)):
-    if x_api_key != API_KEY:
+async def perform_action(
+    request: ActionRequest, authorization: str = Header(None)
+):
+    user_id = _get_user_id(authorization)
+    if user_id != request.user_id:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     request_id = get_request_id()
     logger.info("Received action request", extra={"request_id": request_id})
@@ -30,8 +50,9 @@ async def perform_action(request: ActionRequest, x_api_key: str = Header(None)):
 
 
 @app.post("/auth/token")
-async def save_token(data: dict, x_api_key: str = Header(None)):
-    if x_api_key != API_KEY:
+async def save_token(data: dict, authorization: str = Header(None)):
+    user_id_header = _get_user_id(authorization)
+    if user_id_header != data.get("user_id"):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     """Store an access token for a user/platform."""
     user_id = data.get("user_id")
@@ -55,9 +76,10 @@ async def save_token(data: dict, x_api_key: str = Header(None)):
 
 
 @app.post("/auth/start")
-async def start_oauth(data: dict, x_api_key: str = Header(None)):
+async def start_oauth(data: dict, authorization: str = Header(None)):
     """Initiate an OAuth authorization flow for a platform."""
-    if x_api_key != API_KEY:
+    user_id_header = _get_user_id(authorization)
+    if user_id_header != data.get("user_id"):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
     user_id = data.get("user_id")
@@ -91,9 +113,10 @@ async def start_oauth(data: dict, x_api_key: str = Header(None)):
 
 
 @app.post("/auth/callback")
-async def oauth_callback(data: dict, x_api_key: str = Header(None)):
+async def oauth_callback(data: dict, authorization: str = Header(None)):
     """Handle OAuth callback and store tokens."""
-    if x_api_key != API_KEY:
+    user_id_header = _get_user_id(authorization)
+    if user_id_header != data.get("user_id"):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
     user_id = data.get("user_id")
@@ -130,13 +153,11 @@ async def oauth_callback(data: dict, x_api_key: str = Header(None)):
     await token_manager.set_token(
         user_id,
         platform,
-        json.dumps(
-            {
-                "access_token": token_data.get("access_token"),
-                "refresh_token": token_data.get("refresh_token"),
-                "expires_in": token_data.get("expires_in"),
-            }
-        ),
+        {
+            "access_token": token_data.get("access_token"),
+            "refresh_token": token_data.get("refresh_token"),
+            "expires_in": token_data.get("expires_in"),
+        },
     )
     logger.info(
         "OAuth token stored",

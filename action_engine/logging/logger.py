@@ -34,6 +34,16 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log_record)
 
 
+class SanitizeTokenFilter(logging.Filter):
+    """Remove token-like fields from log records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:  # pragma: no cover - simple filter
+        for attr in ("token", "access_token", "refresh_token", "authorization"):
+            if hasattr(record, attr):
+                setattr(record, attr, "***")
+        return True
+
+
 def get_logger(name: str) -> logging.Logger:
     """Return a logger configured with :class:`JsonFormatter`."""
 
@@ -43,6 +53,7 @@ def get_logger(name: str) -> logging.Logger:
         handler = logging.StreamHandler()
         handler.setFormatter(JsonFormatter())
         logger.addHandler(handler)
+        logger.addFilter(SanitizeTokenFilter())
         logger.setLevel(logging.INFO)
         logger.propagate = False
     return logger

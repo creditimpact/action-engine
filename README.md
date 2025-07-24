@@ -24,6 +24,8 @@ Action Engine is a lightweight FastAPI service for routing automation requests t
    uvicorn action_engine.main:app --reload
    ```
 
+Use `/login` to obtain a bearer token for a given `user_id`. Include this token in the `Authorization` header when calling other endpoints.
+
 The API exposes a `/perform_action` endpoint that accepts a JSON payload with `platform`, `action_type` and `payload` fields.
 
 ## Supported platforms and actions
@@ -39,13 +41,13 @@ Additional adapter functions (e.g. `send_email` in the Gmail adapter) can be use
 
 ## Initiating OAuth
 
-Some adapters require OAuth tokens. Use the `/auth/start` and `/auth/callback` endpoints to complete the flow:
+Some adapters require OAuth tokens. Use the `/auth/start` and `/auth/callback` endpoints to complete the flow. Authenticate requests using a bearer token obtained from the `/login` endpoint:
 
 1. **Start authorization**
 
    ```bash
    curl -X POST http://localhost:8000/auth/start \
-        -H "X-API-Key: <your key>" \
+        -H "Authorization: Bearer <token>" \
         -d '{"user_id": "u1", "platform": "gmail", "client_id": "id", "client_secret": "secret", "redirect_uri": "https://app/callback"}'
    ```
 
@@ -57,7 +59,7 @@ Some adapters require OAuth tokens. Use the `/auth/start` and `/auth/callback` e
 
    ```bash
    curl -X POST http://localhost:8000/auth/callback \
-        -H "X-API-Key: <your key>" \
+        -H "Authorization: Bearer <token>" \
         -d '{"user_id": "u1", "platform": "gmail", "client_id": "id", "client_secret": "secret", "redirect_uri": "https://app/callback", "authorization_response": "..."}'
    ```
 

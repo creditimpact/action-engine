@@ -7,7 +7,9 @@ from action_engine.tests.conftest import DummyRedis
 # Import main after FastAPI stubs are set up in conftest
 main = importlib.import_module("action_engine.main")
 
-API_KEY = "testkey"
+async def _token(user_id: str) -> str:
+    resp = await main.login({"user_id": user_id})
+    return resp.content["token"]
 
 @pytest.mark.asyncio
 async def test_start_oauth_returns_url():
@@ -20,7 +22,8 @@ async def test_start_oauth_returns_url():
         "redirect_uri": "https://app/cb",
         "scope": "email",
     }
-    response = await main.start_oauth(data, x_api_key=API_KEY)
+    token = await _token("u1")
+    response = await main.start_oauth(data, authorization=f"Bearer {token}")
     assert response.status_code == 200
     assert response.content["authorization_url"].startswith("https://auth.example.com")
 
@@ -35,8 +38,8 @@ async def test_oauth_callback_stores_token():
         "redirect_uri": "https://app/cb",
         "authorization_response": "https://app/cb?code=1",
     }
-    response = await main.oauth_callback(data, x_api_key=API_KEY)
+    token = await _token("u1")
+    response = await main.oauth_callback(data, authorization=f"Bearer {token}")
     assert response.status_code == 200
     stored = await token_manager.get_token("u1", "gmail")
-    token_data = json.loads(stored)
-    assert token_data["access_token"] == "dummy-access-token"
+    assert stored["access_token"] == "dummy-access-token"
