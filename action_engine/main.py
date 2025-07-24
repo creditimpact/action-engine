@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from action_engine.router import route_action
 from action_engine.validator import ActionRequest
 from action_engine.config import API_KEY
+from action_engine.auth.oauth_client import get_oauth_client
 
 from action_engine.logging.logger import (
     get_logger,
@@ -50,3 +51,19 @@ async def save_token(data: dict, x_api_key: str = Header(None)):
         extra={"user_id": user_id, "platform": platform, "request_id": get_request_id()},
     )
     return JSONResponse(content={"status": "ok"})
+
+
+@app.post("/auth/start")
+async def start_oauth(data: dict, x_api_key: str = Header(None)):
+    """Begin an OAuth flow for a specific platform."""
+    if x_api_key != API_KEY:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    platform = data.get("platform")
+    scope = data.get("scope", "")
+    if not isinstance(platform, str):
+        return JSONResponse({"error": "platform is required"}, status_code=400)
+    client = get_oauth_client(platform)
+    if client is None:
+        return JSONResponse({"error": "Unsupported platform"}, status_code=400)
+    url = await client.initiate_authorization(scope)
+    return JSONResponse({"authorization_url": url})

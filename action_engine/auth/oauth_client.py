@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+"""Utility classes for OAuth integrations."""
+
+from typing import Optional
+
+from action_engine import config
+
+
 class OAuthClient:
     """Basic OAuth client stub for initiating and completing authorization."""
 
@@ -22,4 +31,34 @@ class OAuthClient:
             "expires_in": 3600,
             "authorization_response": authorization_response,
         }
+
+
+def get_oauth_client(platform: str) -> Optional[OAuthClient]:
+    """Instantiate an :class:`OAuthClient` for ``platform`` using config values."""
+    platform = platform.lower()
+    if platform == "gmail":
+        return OAuthClient(
+            config.GMAIL_CLIENT_ID,
+            config.GMAIL_CLIENT_SECRET,
+            config.GMAIL_REDIRECT_URI,
+        )
+    if platform == "google_calendar":
+        return OAuthClient(
+            config.GOOGLE_CALENDAR_CLIENT_ID,
+            config.GOOGLE_CALENDAR_CLIENT_SECRET,
+            config.GOOGLE_CALENDAR_REDIRECT_URI,
+        )
+    if platform == "notion":
+        return OAuthClient(
+            config.NOTION_CLIENT_ID,
+            config.NOTION_CLIENT_SECRET,
+            config.NOTION_REDIRECT_URI,
+        )
+    if platform == "zapier":
+        return OAuthClient(
+            config.ZAPIER_CLIENT_ID,
+            config.ZAPIER_CLIENT_SECRET,
+            config.ZAPIER_REDIRECT_URI,
+        )
+    return None
 
