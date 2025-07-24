@@ -1,53 +1,86 @@
 # Vault Engine
 
-Vault Engine is a simple token storage service used alongside the Action Engine. It stores OAuth tokens encrypted in Redis and exposes a small HTTP API for retrieving them.
+The Vault is PURAIFI's secure storage service for all user-level authorization data. Other engines (such as the Action and Sync engines) rely on the Vault to access OAuth tokens and connection metadata without handling secrets directly.
 
-## Required environment variables
+## Overview & Role
+- Stores encrypted OAuth access and refresh tokens along with platform scopes and expiration times.
+- Maintains the connection status for each platform per user so other engines can determine if they can operate on the user's behalf.
+- Provides a stateless REST API that only other engines may call. There are no direct user-facing endpoints.
 
-- `VAULT_REDIS_URL` – connection string for the Redis instance where encrypted tokens are stored.
-- `VAULT_ENCRYPTION_KEY` – 32‑byte key used for AES‑256‑CBC encryption.
-- `VAULT_ENCRYPTION_IV` – 16‑byte initialization vector for encryption.
-- `ACTION_ENGINE_KEY` – shared key for the action engine.
-- `SYNC_ENGINE_KEY` – shared key for the sync engine.
-- `LOCAL_ENGINE_KEY` – shared key for local/testing access.
+## What It Stores
+- OAuth tokens for Google, Slack, Notion and other platforms.
+- Token expiry times and granted scopes.
+- Per-user encryption keys and session information (never raw passwords).
 
-These engine keys are validated via the `X-Engine-ID` and `X-Engine-Key` headers on every request.
+## Core Functions
+- Securely store and retrieve tokens.
+- Refresh expired tokens when possible.
+- Report the connection status of each platform for a user.
+- Supply the Sync engine with an integration map describing which services are connected.
 
-## API usage
+## API Responsibilities
+All requests must include `X-Engine-ID` and `X-Engine-Key` headers identifying the calling engine. The current endpoints are:
 
-Tokens are typically obtained from the Action Engine's OAuth flow described in the [project README](../README.md#initiating-oauth). Once retrieved you can store and fetch them using the following endpoints.
+| Method & Path      | Description                              |
+|--------------------|------------------------------------------|
+| `POST /store_token`| Store or update a token for a user.      |
+| `POST /get_token`  | Retrieve (and refresh if needed) a token.|
+| `GET  /status`     | Return connection status for each platform for a user.|
+| *(internal)*       | Platform map generation for the Sync engine.|
 
-### Store token
+Each endpoint returns a JSON response.
+
+## Architecture
+- Stateless FastAPI application.
+- Authentication enforced by `auth_middleware.py` for each engine.
+- Tokens stored in Redis and encrypted using AES‑256 via `token_encryptor.py`. The system is designed for a double layer of encryption so secrets never appear in plaintext.
+- Access is separated per user and per platform key (`<user_id>:<platform>`).
+- Extensive logging using `vault_logger.py` attaches a UUID request ID to every operation.
+
+## Modules & Files
+- `vault_api.py` – HTTP API definitions.
+- `auth_middleware.py` – validates engine credentials for every request.
+- `vault_storage.py` – Redis based encrypted token store.
+- `token_encryptor.py` – AES encryption helper.
+- `token_refresher.py` – refresh logic for expired tokens.
+- `connection_checker.py` – determines connection health per platform.
+- `vault_logger.py` – JSON logging with request ID context.
+- `platform_profiles/` – YAML files describing OAuth details for supported platforms.
+
+## Configuration
+The service requires the following environment variables:
+
+- `VAULT_REDIS_URL` – connection string for the Redis instance.
+- `VAULT_ENCRYPTION_KEY` – 32‑byte key used for AES‑256 encryption.
+- `VAULT_ENCRYPTION_IV` – 16‑byte initialization vector.
+- `ACTION_ENGINE_KEY` – shared secret for the Action engine.
+- `SYNC_ENGINE_KEY` – shared secret for the Sync engine.
+- `LOCAL_ENGINE_KEY` – optional secret for local/testing access.
+
+## Running Locally
+Install dependencies and launch the FastAPI app using Uvicorn:
 
 ```bash
-curl -X POST http://localhost:8000/store_token \
-     -H "X-Engine-ID: action" \
-     -H "X-Engine-Key: $ACTION_ENGINE_KEY" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "user_id": "u1",
-           "platform": "google",
-           "access_token": "...",
-           "refresh_token": "...",
-           "expires_at": 1234567890,
-           "scopes": ["email"]
-         }'
+pip install fastapi uvicorn redis
+uvicorn vault_engine.vault_api:app --reload
 ```
 
-### Get token
+## Integration with the Sync Engine
+The Sync engine queries the Vault to obtain connection health and build a user's integration map. This enables local prompts or re‑authentication flows whenever tokens expire or permissions change.
+
+## Scaling & Resilience
+- Multiple Vault instances can run behind a load balancer.
+- The encrypted store can be backed by Redis, Dynamo or another scalable database.
+- Logs are output in JSON and suitable for ingestion by Elastic, Loki or CloudWatch.
+- Retrieval and refresh operations aim to complete in milliseconds to minimize latency for dependent engines.
+
+## Insight Generation (Future)
+While not currently enabled, the Vault can analyze logs to detect repeated OAuth failures and trends in token expiry. These insights can help surface reconnection prompts in the local UX.
+
+## Testing
+Run unit tests from the repository root:
 
 ```bash
-curl -X POST "http://localhost:8000/get_token?user_id=u1&platform=google" \
-     -H "X-Engine-ID: action" \
-     -H "X-Engine-Key: $ACTION_ENGINE_KEY"
+pytest vault_engine/tests
 ```
 
-### Connection status
-
-```bash
-curl -X POST "http://localhost:8000/status?user_id=u1" \
-     -H "X-Engine-ID: action" \
-     -H "X-Engine-Key: $ACTION_ENGINE_KEY"
-```
-
-All endpoints return JSON responses indicating success or containing the requested token information.
