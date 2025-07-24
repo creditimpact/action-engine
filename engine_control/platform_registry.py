@@ -18,6 +18,12 @@ def get_platform_status(platform_name: str) -> str:
     return _PLATFORM_STATUS.get(platform_name, "active")
 
 
+def list_platforms() -> Dict[str, str]:
+    """Return a mapping of platform names to their statuses."""
+
+    return dict(_PLATFORM_STATUS)
+
+
 def clear_platforms() -> None:
     """Remove all platform statuses (mainly for tests)."""
     _PLATFORM_STATUS.clear()
