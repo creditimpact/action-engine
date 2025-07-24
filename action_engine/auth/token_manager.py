@@ -3,8 +3,9 @@
 from typing import Optional, Dict, Any
 import json
 import time
+import base64
 
-from action_engine.config import REDIS_URL
+from action_engine.config import REDIS_URL, ENCRYPTION_KEY
 
 try:
     import redis.asyncio as redis  # type: ignore
@@ -12,6 +13,22 @@ except Exception:  # pragma: no cover - optional dependency
     redis = None  # type: ignore
 
 _redis_client: Optional["redis.Redis"] = None
+
+
+def _xor(data: bytes, key: bytes) -> bytes:
+    return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+
+
+def _encrypt(text: str) -> str:
+    data = text.encode()
+    key = ENCRYPTION_KEY.encode()
+    return base64.urlsafe_b64encode(_xor(data, key)).decode()
+
+
+def _decrypt(token: str) -> str:
+    data = base64.urlsafe_b64decode(token.encode())
+    key = ENCRYPTION_KEY.encode()
+    return _xor(data, key).decode()
 
 
 async def init_redis(client: "redis.Redis") -> None:
@@ -43,7 +60,8 @@ async def get_token(user_id: str, platform: str) -> Optional[Dict[str, Any]]:
     if raw is None:
         return None
     try:
-        return json.loads(raw)
+        decrypted = _decrypt(raw)
+        return json.loads(decrypted)
     except Exception:  # pragma: no cover - invalid json
         return None
 
@@ -51,7 +69,8 @@ async def get_token(user_id: str, platform: str) -> Optional[Dict[str, Any]]:
 async def set_token(user_id: str, platform: str, token_data: Dict[str, Any]) -> None:
     """Store token information for ``user_id``/``platform``."""
     client = await _get_redis()
-    await client.set(f"{user_id}:{platform}", json.dumps(token_data))
+    encoded = _encrypt(json.dumps(token_data))
+    await client.set(f"{user_id}:{platform}", encoded)
 
 
 def is_expired(token_data: Dict[str, Any]) -> bool:

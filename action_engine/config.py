@@ -10,5 +10,7 @@ if _env_path.exists():
                 key, value = line.strip().split('=', 1)
                 os.environ.setdefault(key, value)
 
-API_KEY = os.getenv('API_KEY', 'testkey')
+SECRET_KEY = os.getenv('SECRET_KEY', 'secret')
+ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ACCESS_TOKEN_EXPIRE_SECONDS', '3600'))
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', 'enc_key')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
