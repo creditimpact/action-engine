@@ -25,7 +25,7 @@ async def create_event(user_id: str, payload: dict):
     """
     # תיעוד / הדמיה
     _validate(payload, CreateEventPayload)
-    token = await token_manager.get_token(user_id, "google_calendar")
+    token = await token_manager.get_access_token(user_id, "google_calendar")
     if not token:
         logger.info(
             "Google Calendar token missing",

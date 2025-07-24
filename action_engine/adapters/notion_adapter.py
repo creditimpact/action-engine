@@ -22,7 +22,7 @@ async def create_task(user_id: str, payload: dict):
     """Create a task in Notion (mocked)."""
     # Simulate interaction with Notion API
     _validate(payload, CreateTaskPayload)
-    token = await token_manager.get_token(user_id, "notion")
+    token = await token_manager.get_access_token(user_id, "notion")
     if not token:
         logger.info(
             "Notion token missing",

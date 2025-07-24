@@ -7,7 +7,7 @@ from action_engine.tests.conftest import DummyRedis
 async def test_gmail_perform_action():
     await token_manager.init_redis(DummyRedis())
     params = {"key": "value"}
-    await token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", {"access_token": "t"})
     result = await gmail_adapter.perform_action("u1", params)
     assert result == {"message": "בוצעה פעולה ב־Gmail", "params": params}
 
@@ -15,7 +15,7 @@ async def test_gmail_perform_action():
 @pytest.mark.asyncio
 async def test_gmail_perform_action_validation_error():
     await token_manager.init_redis(DummyRedis())
-    await token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", {"access_token": "t"})
     with pytest.raises(Exception):
         await gmail_adapter.perform_action("u1", {})
 
@@ -23,7 +23,7 @@ async def test_gmail_perform_action_validation_error():
 async def test_gmail_send_email():
     await token_manager.init_redis(DummyRedis())
     payload = {"to": "x@example.com"}
-    await token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", {"access_token": "t"})
     result = await gmail_adapter.send_email("u1", payload)
     assert result == {
         "status": "success",
@@ -36,7 +36,7 @@ async def test_gmail_send_email():
 @pytest.mark.asyncio
 async def test_gmail_send_email_validation_error():
     await token_manager.init_redis(DummyRedis())
-    await token_manager.set_token("u1", "gmail", "t")
+    await token_manager.set_token("u1", "gmail", {"access_token": "t"})
     with pytest.raises(Exception):
         await gmail_adapter.send_email("u1", {})
 
@@ -44,7 +44,7 @@ async def test_gmail_send_email_validation_error():
 async def test_google_calendar_create_event():
     await token_manager.init_redis(DummyRedis())
     payload = {"title": "meeting"}
-    await token_manager.set_token("u1", "google_calendar", "t")
+    await token_manager.set_token("u1", "google_calendar", {"access_token": "t"})
     result = await google_calendar_adapter.create_event("u1", payload)
     assert result == {
         "status": "success",
@@ -57,7 +57,7 @@ async def test_google_calendar_create_event():
 @pytest.mark.asyncio
 async def test_google_calendar_create_event_validation_error():
     await token_manager.init_redis(DummyRedis())
-    await token_manager.set_token("u1", "google_calendar", "t")
+    await token_manager.set_token("u1", "google_calendar", {"access_token": "t"})
     with pytest.raises(Exception):
         await google_calendar_adapter.create_event("u1", {})
 
@@ -65,7 +65,7 @@ async def test_google_calendar_create_event_validation_error():
 async def test_notion_create_task():
     await token_manager.init_redis(DummyRedis())
     payload = {"title": "task"}
-    await token_manager.set_token("u1", "notion", "t")
+    await token_manager.set_token("u1", "notion", {"access_token": "t"})
     result = await notion_adapter.create_task("u1", payload)
     assert result == {
         "status": "success",
@@ -78,7 +78,7 @@ async def test_notion_create_task():
 @pytest.mark.asyncio
 async def test_notion_create_task_validation_error():
     await token_manager.init_redis(DummyRedis())
-    await token_manager.set_token("u1", "notion", "t")
+    await token_manager.set_token("u1", "notion", {"access_token": "t"})
     with pytest.raises(Exception):
         await notion_adapter.create_task("u1", {})
 
@@ -86,7 +86,7 @@ async def test_notion_create_task_validation_error():
 async def test_zapier_perform_action():
     await token_manager.init_redis(DummyRedis())
     params = {"x": 2}
-    await token_manager.set_token("u1", "zapier", "t")
+    await token_manager.set_token("u1", "zapier", {"access_token": "t"})
     result = await zapier_adapter.perform_action("u1", params)
     assert result == {"message": "בוצעה פעולה דרך Zapier", "params": params}
 
@@ -94,6 +94,6 @@ async def test_zapier_perform_action():
 @pytest.mark.asyncio
 async def test_zapier_perform_action_validation_error():
     await token_manager.init_redis(DummyRedis())
-    await token_manager.set_token("u1", "zapier", "t")
+    await token_manager.set_token("u1", "zapier", {"access_token": "t"})
     with pytest.raises(Exception):
         await zapier_adapter.perform_action("u1", {})
